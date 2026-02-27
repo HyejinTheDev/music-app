@@ -32,4 +32,9 @@ class Song {
       audioUrl: map['audio_url'] ?? '', // <--- THÊM (Nếu null thì để rỗng)
     );
   }
+  String get coverUrl {
+    // Nếu id null thì lấy số 1, ngược lại lấy id
+    final seed = id ?? 1; 
+    return "https://picsum.photos/seed/$seed/200/200"; 
+  }
 }
