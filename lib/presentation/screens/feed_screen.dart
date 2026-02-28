@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/song_model.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -11,50 +13,20 @@ class Comment {
   Comment({required this.userName, required this.text, required this.timeAgo});
 }
 
-// --- MODEL BÀI VIẾT (POST) ---
-class Post {
-  final String userName;
-  final String userAvatar;
-  final String timeAgo;
-  final String caption;
-  final Song sharedSong;
-  int likes;
-  int comments;
-  bool isLiked;
-  final List<Comment> commentList; // Danh sách bình luận
-
-  Post({
-    required this.userName,
-    required this.userAvatar,
-    required this.timeAgo,
-    required this.caption,
-    required this.sharedSong,
-    this.likes = 0,
-    this.comments = 0,
-    this.isLiked = false,
-    List<Comment>? commentList,
-  }) : commentList = commentList ?? [];
-}
-
 class FeedScreen extends StatefulWidget {
-  final List<Post> posts;
   final AudioPlayer player;
   final Song? currentSong;
   final Function(Song) onPlaySong;
-  final List<Song>
-  allSongs; // Danh sách tất cả bài hát (để chọn khi tạo bài viết)
-  final Function(Song) onSaveToPlaylist; // Callback lưu bài hát vào playlist
-  final Function(Post) onAddPost; // Callback thêm bài viết mới
+  final List<Song> favoriteSongs;
+  final Function(Song) onToggleFavorite;
 
   const FeedScreen({
     Key? key,
-    required this.posts,
     required this.player,
     this.currentSong,
     required this.onPlaySong,
-    required this.allSongs,
-    required this.onSaveToPlaylist,
-    required this.onAddPost,
+    required this.favoriteSongs,
+    required this.onToggleFavorite,
   }) : super(key: key);
 
   @override
@@ -88,26 +60,73 @@ class _FeedScreenState extends State<FeedScreen> {
                     size: 28,
                   ),
                   onPressed: () => _showCreatePostSheet(),
-                ), // Nút để đăng bài
+                ),
               ],
             ),
           ),
 
-          // Danh sách các bài viết
+          // Danh sách các bài viết — ĐỌC TỪ FIRESTORE
           Expanded(
-            child: widget.posts.isEmpty
-                ? const Center(
+            child: StreamBuilder<QuerySnapshot>(
+              // Đọc trực tiếp từ Firestore — không cần orderBy để tránh lỗi index
+              stream: FirebaseFirestore.instance
+                  .collection('posts')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                // Đang tải
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.tealAccent),
+                  );
+                }
+
+                // Lỗi
+                if (snapshot.hasError) {
+                  return Center(
                     child: Text(
-                      "Chưa có bài viết nào",
-                      style: TextStyle(color: Colors.grey),
+                      "Lỗi tải bài viết: ${snapshot.error}",
+                      style: const TextStyle(color: Colors.grey),
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: widget.posts.length,
-                    itemBuilder: (context, index) {
-                      return _buildPostCard(widget.posts[index]);
-                    },
-                  ),
+                  );
+                }
+
+                // Không có dữ liệu
+                final docs = List<QueryDocumentSnapshot>.from(
+                  snapshot.data?.docs ?? [],
+                );
+                if (docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      "Chưa có bài viết nào\nHãy chia sẻ bài hát đầu tiên!",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, height: 1.5),
+                    ),
+                  );
+                }
+
+                // Sắp xếp theo timestamp mới nhất (client-side)
+                docs.sort((a, b) {
+                  final aData = a.data() as Map<String, dynamic>;
+                  final bData = b.data() as Map<String, dynamic>;
+                  final aTime = aData['timestamp'] as Timestamp?;
+                  final bTime = bData['timestamp'] as Timestamp?;
+                  if (aTime == null && bTime == null) return 0;
+                  if (aTime == null) return 1;
+                  if (bTime == null) return -1;
+                  return bTime.compareTo(aTime);
+                });
+
+                // Hiển thị danh sách bài viết
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final docId = docs[index].id;
+                    return _buildPostCard(data, docId);
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -115,12 +134,13 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   // =============================================
-  // BOTTOM SHEET: TẠO BÀI VIẾT MỚI
+  // BOTTOM SHEET: TẠO BÀI VIẾT MỚI (ĐĂNG LÊN FIRESTORE)
   // =============================================
   void _showCreatePostSheet() {
     final captionController = TextEditingController();
     Song? selectedSong;
 
+    // Lấy danh sách bài hát từ Firestore (collection "songs" theo user)
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -171,19 +191,44 @@ class _FeedScreenState extends State<FeedScreen> {
                         TextButton(
                           onPressed: selectedSong == null
                               ? null
-                              : () {
-                                  final newPost = Post(
-                                    userName: "Bạn",
-                                    userAvatar:
-                                        "https://i.pravatar.cc/150?img=12",
-                                    timeAgo: "Vừa xong",
-                                    caption: captionController.text.isNotEmpty
-                                        ? captionController.text
-                                        : "Đang nghe bài này 🎵",
-                                    sharedSong: selectedSong!,
-                                  );
-                                  widget.onAddPost(newPost);
-                                  Navigator.pop(context);
+                              : () async {
+                                  final user =
+                                      FirebaseAuth.instance.currentUser;
+                                  try {
+                                    await FirebaseFirestore.instance
+                                        .collection('posts')
+                                        .add({
+                                          'userName':
+                                              user?.displayName ??
+                                              "Người dùng ẩn danh",
+                                          'userAvatar':
+                                              user?.photoURL ??
+                                              "https://i.pravatar.cc/150?img=12",
+                                          'caption':
+                                              captionController.text.isNotEmpty
+                                              ? captionController.text
+                                              : "Đang nghe bài này 🎵",
+                                          'timestamp':
+                                              FieldValue.serverTimestamp(),
+                                          'likes': 0,
+                                          'comments': 0,
+                                          'likedBy': [],
+                                          'songTitle': selectedSong!.title,
+                                          'songArtist': selectedSong!.artist,
+                                          'songCoverUrl':
+                                              selectedSong!.coverUrl,
+                                          'songAudioUrl':
+                                              selectedSong!.audioUrl,
+                                          'songId': selectedSong!.id,
+                                        });
+                                    Navigator.pop(context);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text("Lỗi đăng bài: $e"),
+                                      ),
+                                    );
+                                  }
                                 },
                           child: Text(
                             "Đăng bài",
@@ -274,61 +319,19 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                     const SizedBox(height: 12),
 
-                    // Tiêu đề danh sách chọn bài hát
+                    // Tiêu đề danh sách chọn bài hát — lấy từ favoriteSongs hoặc từ Firestore
                     const Text(
                       "Chọn bài hát để chia sẻ:",
                       style: TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                     const SizedBox(height: 8),
 
-                    // Danh sách bài hát
+                    // Danh sách bài hát yêu thích để chọn chia sẻ
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: widget.allSongs.length,
-                        itemBuilder: (context, index) {
-                          final song = widget.allSongs[index];
-                          final isSelected = selectedSong?.id == song.id;
-                          return ListTile(
-                            leading: ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.network(
-                                song.coverUrl,
-                                width: 45,
-                                height: 45,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            title: Text(
-                              song.title,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.tealAccent
-                                    : Colors.white,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              song.artist,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                            trailing: isSelected
-                                ? const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.tealAccent,
-                                  )
-                                : const Icon(
-                                    Icons.radio_button_unchecked,
-                                    color: Colors.grey,
-                                  ),
-                            onTap: () =>
-                                setSheetState(() => selectedSong = song),
-                          );
-                        },
+                      child: _buildSongListForSharing(
+                        selectedSong: selectedSong,
+                        onSelect: (song) =>
+                            setSheetState(() => selectedSong = song),
                       ),
                     ),
                   ],
@@ -341,10 +344,105 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
+  /// Lấy danh sách bài hát để chọn chia sẻ
+  /// Ưu tiên lấy từ Firestore songs của user, nếu không thì dùng favoriteSongs
+  Widget _buildSongListForSharing({
+    required Song? selectedSong,
+    required Function(Song) onSelect,
+  }) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const Center(
+        child: Text("Vui lòng đăng nhập", style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    // Đọc bài hát từ Realtime Database hoặc dùng Firestore
+    // Ở đây ta dùng StreamBuilder đọc từ Firestore collection "songs" theo user
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('user_songs')
+          .doc(user.uid)
+          .collection('songs')
+          .snapshots(),
+      builder: (context, snapshot) {
+        // Nếu chưa có collection user_songs, dùng favoriteSongs
+        List<Song> songsToShow = [];
+
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          songsToShow = snapshot.data!.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return Song(
+              id: data['id'],
+              title: data['title'] ?? '',
+              artist: data['artist'] ?? '',
+              lyrics: data['lyrics'] ?? '',
+              audioUrl: data['audio_url'] ?? data['audioUrl'] ?? '',
+            );
+          }).toList();
+        }
+
+        // Nếu không có trên Firestore, dùng favoriteSongs
+        if (songsToShow.isEmpty) {
+          songsToShow = widget.favoriteSongs;
+        }
+
+        if (songsToShow.isEmpty) {
+          return const Center(
+            child: Text(
+              "Chưa có bài hát nào.\nHãy thêm bài hát trong trang Profile!",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, height: 1.5),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: songsToShow.length,
+          itemBuilder: (context, index) {
+            final song = songsToShow[index];
+            final isSelected = selectedSong?.id == song.id;
+            return ListTile(
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.network(
+                  song.coverUrl,
+                  width: 45,
+                  height: 45,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              title: Text(
+                song.title,
+                style: TextStyle(
+                  color: isSelected ? Colors.tealAccent : Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                song.artist,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              trailing: isSelected
+                  ? const Icon(Icons.check_circle, color: Colors.tealAccent)
+                  : const Icon(
+                      Icons.radio_button_unchecked,
+                      color: Colors.grey,
+                    ),
+              onTap: () => onSelect(song),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // =============================================
-  // BOTTOM SHEET: BÌNH LUẬN
+  // BOTTOM SHEET: BÌNH LUẬN (ĐỌC/GHI TỪ FIRESTORE)
   // =============================================
-  void _showCommentSheet(Post post) {
+  void _showCommentSheet(Map<String, dynamic> postData, String docId) {
     final commentController = TextEditingController();
 
     showModalBottomSheet(
@@ -355,202 +453,273 @@ class _FeedScreenState extends State<FeedScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16,
-                right: 16,
-                top: 16,
-              ),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.6,
-                child: Column(
-                  children: [
-                    // Thanh kéo
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[600],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Column(
+              children: [
+                // Thanh kéo
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[600],
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    const SizedBox(height: 12),
+                  ),
+                ),
+                const SizedBox(height: 12),
 
-                    // Tiêu đề
-                    Text(
-                      "Bình luận (${post.commentList.length})",
+                // Tiêu đề
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('posts')
+                      .doc(docId)
+                      .collection('comments')
+                      .orderBy('timestamp', descending: false)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    final commentCount = snapshot.data?.docs.length ?? 0;
+                    return Text(
+                      "Bình luận ($commentCount)",
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Divider(color: Colors.white10),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Divider(color: Colors.white10),
 
-                    // Danh sách bình luận
-                    Expanded(
-                      child: post.commentList.isEmpty
-                          ? const Center(
-                              child: Text(
-                                "Chưa có bình luận nào\nHãy là người đầu tiên bình luận!",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  height: 1.5,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: post.commentList.length,
-                              itemBuilder: (context, index) {
-                                final comment = post.commentList[index];
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
+                // Danh sách bình luận từ Firestore
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('posts')
+                        .doc(docId)
+                        .collection('comments')
+                        .orderBy('timestamp', descending: false)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.tealAccent,
+                          ),
+                        );
+                      }
+
+                      final comments = snapshot.data?.docs ?? [];
+
+                      if (comments.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            "Chưa có bình luận nào\nHãy là người đầu tiên bình luận!",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey, height: 1.5),
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: comments.length,
+                        itemBuilder: (context, index) {
+                          final cData =
+                              comments[index].data() as Map<String, dynamic>;
+                          final userName = cData['userName'] ?? 'Ẩn danh';
+                          final text = cData['text'] ?? '';
+                          final timeAgo = cData['timeAgo'] ?? '';
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: Colors.tealAccent
+                                      .withOpacity(0.2),
+                                  child: Text(
+                                    userName.isNotEmpty
+                                        ? userName[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      color: Colors.tealAccent,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                  child: Row(
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      CircleAvatar(
-                                        radius: 16,
-                                        backgroundColor: Colors.tealAccent
-                                            .withOpacity(0.2),
-                                        child: Text(
-                                          comment.userName[0].toUpperCase(),
-                                          style: const TextStyle(
-                                            color: Colors.tealAccent,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
+                                      Row(
+                                        children: [
+                                          Text(
+                                            userName,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            timeAgo,
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  comment.userName,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  comment.timeAgo,
-                                                  style: const TextStyle(
-                                                    color: Colors.grey,
-                                                    fontSize: 11,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              comment.text,
-                                              style: const TextStyle(
-                                                color: Color(0xFFE0E0E0),
-                                                fontSize: 14,
-                                                height: 1.3,
-                                              ),
-                                            ),
-                                          ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        text,
+                                        style: const TextStyle(
+                                          color: Color(0xFFE0E0E0),
+                                          fontSize: 14,
+                                          height: 1.3,
                                         ),
                                       ),
                                     ],
                                   ),
-                                );
-                              },
-                            ),
-                    ),
-
-                    // Ô nhập bình luận
-                    const Divider(color: Colors.white10),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: commentController,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: InputDecoration(
-                                hintText: "Viết bình luận...",
-                                hintStyle: TextStyle(color: Colors.grey[500]),
-                                filled: true,
-                                fillColor: Colors.black26,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
                                 ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () {
-                              if (commentController.text.trim().isNotEmpty) {
-                                final newComment = Comment(
-                                  userName: "Bạn",
-                                  text: commentController.text.trim(),
-                                  timeAgo: "Vừa xong",
-                                );
-                                setSheetState(() {
-                                  post.commentList.add(newComment);
-                                  post.comments = post.commentList.length;
-                                });
-                                // Cập nhật UI bên ngoài
-                                setState(() {});
-                                commentController.clear();
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(
-                                color: Colors.tealAccent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.send,
-                                color: Colors.black,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
+
+                // Ô nhập bình luận
+                const Divider(color: Colors.white10),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: commentController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: "Viết bình luận...",
+                            hintStyle: TextStyle(color: Colors.grey[500]),
+                            filled: true,
+                            fillColor: Colors.black26,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () async {
+                          if (commentController.text.trim().isNotEmpty) {
+                            final user = FirebaseAuth.instance.currentUser;
+                            try {
+                              // Thêm bình luận vào subcollection
+                              await FirebaseFirestore.instance
+                                  .collection('posts')
+                                  .doc(docId)
+                                  .collection('comments')
+                                  .add({
+                                    'userName': user?.displayName ?? 'Ẩn danh',
+                                    'text': commentController.text.trim(),
+                                    'timeAgo': 'Vừa xong',
+                                    'timestamp': FieldValue.serverTimestamp(),
+                                  });
+
+                              // Cập nhật số lượng comment trên post
+                              final commentsSnapshot = await FirebaseFirestore
+                                  .instance
+                                  .collection('posts')
+                                  .doc(docId)
+                                  .collection('comments')
+                                  .get();
+
+                              await FirebaseFirestore.instance
+                                  .collection('posts')
+                                  .doc(docId)
+                                  .update({
+                                    'comments': commentsSnapshot.docs.length,
+                                  });
+
+                              commentController.clear();
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Lỗi bình luận: $e")),
+                              );
+                            }
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: Colors.tealAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.send,
+                            color: Colors.black,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
   // =============================================
-  // VẼ TỪNG BÀI VIẾT (POST CARD)
+  // VẼ TỪNG BÀI VIẾT (POST CARD) — TỪ FIRESTORE DATA
   // =============================================
-  Widget _buildPostCard(Post post) {
-    final isPlayingThisSong = widget.currentSong?.id == post.sharedSong.id;
+  Widget _buildPostCard(Map<String, dynamic> data, String docId) {
+    // Tạo Song tạm từ dữ liệu Firestore
+    final sharedSong = Song(
+      id: data['songId'],
+      title: data['songTitle'] ?? 'Không rõ',
+      artist: data['songArtist'] ?? 'Không rõ',
+      lyrics: '',
+      audioUrl: data['songAudioUrl'] ?? '',
+    );
+    // Dùng coverUrl từ Firestore nếu có, ngược lại dùng getter từ Song
+    final coverUrl = data['songCoverUrl'] ?? sharedSong.coverUrl;
+
+    final isPlayingThisSong = widget.currentSong?.id == sharedSong.id;
+    final likes = data['likes'] ?? 0;
+    final comments = data['comments'] ?? 0;
+
+    // Kiểm tra user hiện tại đã like chưa
+    final user = FirebaseAuth.instance.currentUser;
+    final likedBy = List<String>.from(data['likedBy'] ?? []);
+    final isLiked = user != null && likedBy.contains(user.uid);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -559,30 +728,32 @@ class _FeedScreenState extends State<FeedScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Thông tin người đăng (Avatar, Tên, Thời gian)
+          // 1. Thông tin người đăng
           ListTile(
             leading: CircleAvatar(
-              backgroundImage: NetworkImage(post.userAvatar),
+              backgroundImage: NetworkImage(
+                data['userAvatar'] ?? 'https://i.pravatar.cc/150?img=12',
+              ),
             ),
             title: Text(
-              post.userName,
+              data['userName'] ?? 'Ẩn danh',
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),
             subtitle: Text(
-              post.timeAgo,
+              _formatTimestamp(data['timestamp']),
               style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
             trailing: const Icon(Icons.more_horiz, color: Colors.grey),
           ),
 
-          // 2. Dòng trạng thái (Caption)
+          // 2. Caption
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
-              post.caption,
+              data['caption'] ?? '',
               style: const TextStyle(
                 color: Color(0xFFE8E8E8),
                 fontSize: 14,
@@ -591,9 +762,9 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
           ),
 
-          // 3. Khung chứa Bài hát được chia sẻ
+          // 3. Bài hát được chia sẻ
           GestureDetector(
-            onTap: () => widget.onPlaySong(post.sharedSong),
+            onTap: () => widget.onPlaySong(sharedSong),
             child: Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(10),
@@ -607,10 +778,19 @@ class _FeedScreenState extends State<FeedScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      post.sharedSong.coverUrl,
+                      coverUrl,
                       width: 60,
                       height: 60,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[800],
+                        child: const Icon(
+                          Icons.music_note,
+                          color: Colors.white54,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -619,7 +799,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          post.sharedSong.title,
+                          sharedSong.title,
                           style: TextStyle(
                             color: isPlayingThisSong
                                 ? Colors.tealAccent
@@ -631,7 +811,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          post.sharedSong.artist,
+                          sharedSong.artist,
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 13,
@@ -644,8 +824,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     stream: widget.player.playerStateStream,
                     builder: (context, snapshot) {
                       final playing = snapshot.data?.playing ?? false;
-                      final isCurrent =
-                          widget.currentSong?.id == post.sharedSong.id;
+                      final isCurrent = widget.currentSong?.id == sharedSong.id;
                       return CircleAvatar(
                         backgroundColor: isCurrent
                             ? Colors.tealAccent
@@ -665,44 +844,39 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
           ),
 
-          // 4. Hàng nút Tương tác (Tim, Bình luận, Lưu vào Playlist)
+          // 4. Hàng nút Tương tác
           const Divider(color: Colors.white10, height: 1),
           Padding(
             padding: const EdgeInsets.only(top: 8, left: 16, right: 16),
             child: Row(
               children: [
-                // Nút Thích
+                // Nút Thích — cập nhật Firestore
                 _buildInteractionButton(
-                  icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-                  color: post.isLiked ? Colors.redAccent : Colors.grey,
-                  text: "${post.likes}",
-                  onTap: () {
-                    setState(() {
-                      post.isLiked = !post.isLiked;
-                      post.isLiked ? post.likes++ : post.likes--;
-                    });
-                  },
+                  icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: isLiked ? Colors.redAccent : Colors.grey,
+                  text: "$likes",
+                  onTap: () => _toggleLike(docId, isLiked, likes),
                 ),
                 const SizedBox(width: 24),
-                // Nút Bình luận — mở bottom sheet
+                // Nút Bình luận
                 _buildInteractionButton(
                   icon: Icons.chat_bubble_outline,
                   color: Colors.grey,
-                  text: "${post.comments}",
-                  onTap: () => _showCommentSheet(post),
+                  text: "$comments",
+                  onTap: () => _showCommentSheet(data, docId),
                 ),
                 const Spacer(),
-                // Nút Lưu vào Playlist (thay thế nút Chia sẻ)
+                // Nút Lưu vào danh sách yêu thích
                 _buildInteractionButton(
                   icon: Icons.playlist_add,
                   color: Colors.grey,
                   text: "Lưu",
                   onTap: () {
-                    widget.onSaveToPlaylist(post.sharedSong);
+                    widget.onToggleFavorite(sharedSong);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          "Đã lưu \"${post.sharedSong.title}\" vào playlist!",
+                          "Đã lưu \"${sharedSong.title}\" vào playlist!",
                         ),
                         backgroundColor: Colors.tealAccent.withOpacity(0.8),
                         behavior: SnackBarBehavior.floating,
@@ -717,6 +891,53 @@ class _FeedScreenState extends State<FeedScreen> {
         ],
       ),
     );
+  }
+
+  // =============================================
+  // TOGGLE LIKE TRÊN FIRESTORE
+  // =============================================
+  Future<void> _toggleLike(
+    String docId,
+    bool isCurrentlyLiked,
+    int currentLikes,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final postRef = FirebaseFirestore.instance.collection('posts').doc(docId);
+
+    if (isCurrentlyLiked) {
+      // Bỏ like
+      await postRef.update({
+        'likes': currentLikes - 1,
+        'likedBy': FieldValue.arrayRemove([user.uid]),
+      });
+    } else {
+      // Thêm like
+      await postRef.update({
+        'likes': currentLikes + 1,
+        'likedBy': FieldValue.arrayUnion([user.uid]),
+      });
+    }
+  }
+
+  // =============================================
+  // FORMAT TIMESTAMP
+  // =============================================
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Vừa xong';
+    if (timestamp is Timestamp) {
+      final dateTime = timestamp.toDate();
+      final now = DateTime.now();
+      final diff = now.difference(dateTime);
+
+      if (diff.inMinutes < 1) return 'Vừa xong';
+      if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+      if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+      if (diff.inDays < 7) return '${diff.inDays} ngày trước';
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
+    return 'Vừa xong';
   }
 
   // Nút tương tác nhỏ

@@ -41,48 +41,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDXQt8kHQMyY6WUaouG5UOiTe4NHH5bea0',
-    appId: '1:327226921382:web:5d06b579b8f694f8e7ff67',
-    messagingSenderId: '327226921382',
-    projectId: 'app-608aa',
-    authDomain: 'app-608aa.firebaseapp.com',
-    storageBucket: 'app-608aa.firebasestorage.app',
-    measurementId: 'G-3EF68K4V6E',
+    apiKey: 'AIzaSyDYQa_pmlg3xXuPUTDzawzxd4htqu6K23c',
+    appId: '1:71696684032:web:7804cbb1bc238dca7af4e5',
+    messagingSenderId: '71696684032',
+    projectId: 'music-app-pro-v2',
+    authDomain: 'music-app-pro-v2.firebaseapp.com',
+    storageBucket: 'music-app-pro-v2.firebasestorage.app',
+    measurementId: 'G-X3R8PNPZ36',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDcU0P3uWGyKvj1uf4u1_x3PE_VSTVF7ww',
-    appId: '1:327226921382:android:d4fafd665b63a677e7ff67',
-    messagingSenderId: '327226921382',
-    projectId: 'app-608aa',
-    storageBucket: 'app-608aa.firebasestorage.app',
+    apiKey: 'AIzaSyBakqZPE9ROZVEiOkLVydsJlz9Q3VF4tsU',
+    appId: '1:71696684032:android:616ea0e30cd065557af4e5',
+    messagingSenderId: '71696684032',
+    projectId: 'music-app-pro-v2',
+    storageBucket: 'music-app-pro-v2.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBFeGJffGOIt2KEidv2FhwLrx-Hg071Ycg',
-    appId: '1:327226921382:ios:7d2720a5e692baeee7ff67',
-    messagingSenderId: '327226921382',
-    projectId: 'app-608aa',
-    storageBucket: 'app-608aa.firebasestorage.app',
+    apiKey: 'AIzaSyBBP9sM7_bbxVWjYGj7L4oUBxmd1y3-Y9o',
+    appId: '1:71696684032:ios:9903c3810347b6d47af4e5',
+    messagingSenderId: '71696684032',
+    projectId: 'music-app-pro-v2',
+    storageBucket: 'music-app-pro-v2.firebasestorage.app',
     iosBundleId: 'com.example.musicApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBFeGJffGOIt2KEidv2FhwLrx-Hg071Ycg',
-    appId: '1:327226921382:ios:7d2720a5e692baeee7ff67',
-    messagingSenderId: '327226921382',
-    projectId: 'app-608aa',
-    storageBucket: 'app-608aa.firebasestorage.app',
+    apiKey: 'AIzaSyBBP9sM7_bbxVWjYGj7L4oUBxmd1y3-Y9o',
+    appId: '1:71696684032:ios:9903c3810347b6d47af4e5',
+    messagingSenderId: '71696684032',
+    projectId: 'music-app-pro-v2',
+    storageBucket: 'music-app-pro-v2.firebasestorage.app',
     iosBundleId: 'com.example.musicApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDXQt8kHQMyY6WUaouG5UOiTe4NHH5bea0',
-    appId: '1:327226921382:web:96dd8ef4cd1581ece7ff67',
-    messagingSenderId: '327226921382',
-    projectId: 'app-608aa',
-    authDomain: 'app-608aa.firebaseapp.com',
-    storageBucket: 'app-608aa.firebasestorage.app',
-    measurementId: 'G-H797D8D7N6',
+    apiKey: 'AIzaSyDYQa_pmlg3xXuPUTDzawzxd4htqu6K23c',
+    appId: '1:71696684032:web:3c8e699c474ec8917af4e5',
+    messagingSenderId: '71696684032',
+    projectId: 'music-app-pro-v2',
+    authDomain: 'music-app-pro-v2.firebaseapp.com',
+    storageBucket: 'music-app-pro-v2.firebasestorage.app',
+    measurementId: 'G-FE2SRN8GB7',
   );
 }

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio/just_audio.dart';
 
+// --- THÊM 2 IMPORT FIREBASE VÀO ĐÂY ---
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 // --- LOGIC IMPORTS ---
 import '../../logic/song_list/song_list_bloc.dart';
 import '../../logic/song_list/song_list_state.dart';
@@ -32,10 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   Song? _currentSong;
 
-  // --- NƠI ĐỰNG DỮ LIỆU TẠM THỜI (Sẽ mất khi tắt App) ---
-  final List<String> _likedSongIds = [];
+  // --- NƠI ĐỰNG DỮ LIỆU TẠM THỜI ---
+  final List<String> _likedSongIds = []; // Chú ý: Đây phải là List<String> nha
   final List<Song> _favoriteSongs = [];
-  final List<Post> _feedPosts = []; // Khai báo túi đựng Bài Viết (Feed)
+  // GHI CHÚ: Đã xóa _feedPosts vì bây giờ FeedScreen sẽ tự động lấy dữ liệu từ Firebase
 
   @override
   void dispose() {
@@ -65,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Hàm gọi Menu 3 chấm và xử lý các sự kiện trả về
+  // --- HÀM XỬ LÝ MENU 3 CHẤM NÂNG CẤP (FIREBASE) ---
   void _handleShowOptions(BuildContext context, Song song) {
     showSongOptionsMenu(
       context: context,
@@ -77,19 +81,35 @@ class _HomeScreenState extends State<HomeScreen> {
       onStateChanged: () => setState(() {}),
       onClearCurrentSong: () => setState(() => _currentSong = null),
 
-      // HÀNH ĐỘNG KHI NGƯỜI DÙNG BẤM "ĐĂNG BÀI" TRONG HỘP THOẠI
-      onShareToFeed: (sharedSong, caption) {
-        setState(() {
-          _feedPosts.add(
-            Post(
-              userName: "Bạn", // Bạn có thể lấy từ Firebase Auth
-              userAvatar: "https://i.pravatar.cc/150?img=12",
-              timeAgo: "Vừa xong",
-              caption: caption,
-              sharedSong: sharedSong,
-            ),
-          );
-        });
+      // BẮN BÀI VIẾT LÊN ĐÁM MÂY FIRESTORE THAY VÌ LƯU Ở RAM
+      onShareToFeed: (sharedSong, caption) async {
+        // 1. Lấy thông tin người dùng đang đăng nhập
+        final user = FirebaseAuth.instance.currentUser;
+
+        try {
+          // 2. Gửi gói dữ liệu lên collection 'posts' của Firestore
+          await FirebaseFirestore.instance.collection('posts').add({
+            'userName': user?.displayName ?? "Người dùng ẩn danh",
+            'userAvatar': user?.photoURL ?? "https://i.pravatar.cc/150?img=12",
+            'caption': caption,
+            'timestamp':
+                FieldValue.serverTimestamp(), // Firestore tự gắn giờ thực tế
+            'likes': 0,
+            'comments': 0,
+            // Lưu kèm thông tin bài hát để máy khác đọc được
+            'songId': sharedSong.id,
+            'songTitle': sharedSong.title,
+            'songArtist': sharedSong.artist,
+            'songCoverUrl': sharedSong.coverUrl,
+            'songAudioUrl': sharedSong.audioUrl,
+          });
+
+          // Đã xóa hàm setState _feedPosts.add vì không cần nữa
+        } catch (e) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Lỗi đăng bài: $e")));
+        }
       },
     );
   }
@@ -153,23 +173,24 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Widget> _buildPages(SongListLoaded state) {
     return [
       _buildHomeContent(state),
+
+      // FeedScreen giờ tự đọc bài viết từ Firestore, không cần truyền posts nữa
       FeedScreen(
-        posts: _feedPosts,
         player: _player,
         currentSong: _currentSong,
         onPlaySong: _playMusic,
-        allSongs: state.songs, // Danh sách bài hát để chọn khi tạo bài viết
-        onSaveToPlaylist: (song) {
-          // Lưu bài hát vào danh sách yêu thích
-          if (!_favoriteSongs.any((s) => s.id == song.id)) {
-            setState(() => _favoriteSongs.add(song));
-          }
-        },
-        onAddPost: (post) {
-          // Thêm bài viết mới vào đầu danh sách
-          setState(() => _feedPosts.insert(0, post));
+        favoriteSongs: _favoriteSongs,
+        onToggleFavorite: (song) {
+          setState(() {
+            if (_favoriteSongs.contains(song)) {
+              _favoriteSongs.remove(song);
+            } else {
+              _favoriteSongs.add(song);
+            }
+          });
         },
       ),
+
       SearchScreen(
         songs: state.songs,
         currentSong: _currentSong,
