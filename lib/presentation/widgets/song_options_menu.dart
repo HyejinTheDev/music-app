@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -20,7 +21,8 @@ void showSongOptionsMenu({
   required Song? currentSong,
   required VoidCallback onStateChanged,
   required VoidCallback onClearCurrentSong,
-  required Function(Song, String) onShareToFeed, // Hàm nhận sự kiện Chia sẻ bài lên Feed
+  required Function(Song, String)
+  onShareToFeed, // Hàm nhận sự kiện Chia sẻ bài lên Feed
 }) {
   showModalBottomSheet(
     context: context,
@@ -159,50 +161,58 @@ void showSongOptionsMenu({
                     },
                   ),
 
-                  const Divider(color: Colors.white10),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
-                    child: Text(
-                      "Quản lý bài hát (Tác giả)",
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                  // --- CHỈ HIỆN SỬA/XÓA KHI LÀ CHỦ BÀI HÁT ---
+                  if (song.userId != null &&
+                      FirebaseAuth.instance.currentUser?.uid ==
+                          song.userId) ...[
+                    const Divider(color: Colors.white10),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                      child: Text(
+                        "Quản lý bài hát (Tác giả)",
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
                     ),
-                  ),
 
-                  ListTile(
-                    leading: const Icon(Icons.edit, color: Colors.white54),
-                    title: const Text(
-                      'Sửa bài hát',
-                      style: TextStyle(color: Colors.white54),
+                    ListTile(
+                      leading: const Icon(Icons.edit, color: Colors.white54),
+                      title: const Text(
+                        'Sửa bài hát',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddEditSongScreen(song: song),
+                          ),
+                        ).then(
+                          (_) => context.read<SongListBloc>().add(LoadSongs()),
+                        );
+                      },
                     ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AddEditSongScreen(song: song),
-                        ),
-                      ).then(
-                        (_) => context.read<SongListBloc>().add(LoadSongs()),
-                      );
-                    },
-                  ),
 
-                  ListTile(
-                    leading: const Icon(Icons.delete, color: Colors.redAccent),
-                    title: const Text(
-                      'Xóa bài hát',
-                      style: TextStyle(color: Colors.redAccent),
+                    ListTile(
+                      leading: const Icon(
+                        Icons.delete,
+                        color: Colors.redAccent,
+                      ),
+                      title: const Text(
+                        'Xóa bài hát',
+                        style: TextStyle(color: Colors.redAccent),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.read<SongBloc>().add(DeleteSongEvent(song.id!));
+                        context.read<SongListBloc>().add(LoadSongs());
+                        if (currentSong?.id == song.id) {
+                          player.stop();
+                          onClearCurrentSong();
+                        }
+                      },
                     ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<SongBloc>().add(DeleteSongEvent(song.id!));
-                      context.read<SongListBloc>().add(LoadSongs());
-                      if (currentSong?.id == song.id) {
-                        player.stop();
-                        onClearCurrentSong();
-                      }
-                    },
-                  ),
+                  ],
                   const SizedBox(height: 20),
                 ],
               ),
@@ -232,10 +242,13 @@ void _showShareBottomSheet(
     builder: (context) {
       return Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom, // Tự đẩy lên khi bật bàn phím
+          bottom: MediaQuery.of(
+            context,
+          ).viewInsets.bottom, // Tự đẩy lên khi bật bàn phím
         ),
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.7, // Chiếm 70% màn hình
+          height:
+              MediaQuery.of(context).size.height * 0.7, // Chiếm 70% màn hình
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,47 +263,72 @@ void _showShareBottomSheet(
                   ),
                   const Text(
                     "Tạo bài viết",
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.tealAccent,
                       foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                       elevation: 0,
                     ),
                     onPressed: () {
                       // Nếu không viết gì thì mặc định là "Đang nghe bài hát này!"
                       String caption = captionController.text.trim();
-                      if (caption.isEmpty) caption = "Đang nghe bài hát này! 🎶";
-                      
+                      if (caption.isEmpty)
+                        caption = "Đang nghe bài hát này! 🎶";
+
                       onShare(song, caption);
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Đã đăng bài lên Feed!"), backgroundColor: Colors.teal),
+                        const SnackBar(
+                          content: Text("Đã đăng bài lên Feed!"),
+                          backgroundColor: Colors.teal,
+                        ),
                       );
                     },
-                    child: const Text("Đăng", style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      "Đăng",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
               const Divider(color: Colors.white10),
-              
+
               // 2. THÔNG TIN NGƯỜI DÙNG (Giả lập Avatar)
               Row(
                 children: [
                   const CircleAvatar(
-                    backgroundImage: NetworkImage("https://i.pravatar.cc/150?img=12"), // Avatar mẫu
+                    backgroundImage: NetworkImage(
+                      "https://i.pravatar.cc/150?img=12",
+                    ), // Avatar mẫu
                     radius: 22,
                   ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Bạn", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      const Text(
+                        "Bạn",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey),
                           borderRadius: BorderRadius.circular(5),
@@ -299,12 +337,18 @@ void _showShareBottomSheet(
                           children: const [
                             Icon(Icons.public, color: Colors.grey, size: 14),
                             SizedBox(width: 4),
-                            Text("Công khai", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text(
+                              "Công khai",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
-                      )
+                      ),
                     ],
-                  )
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -337,16 +381,36 @@ void _showShareBottomSheet(
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(song.coverUrl, width: 60, height: 60, fit: BoxFit.cover),
+                      child: Image.network(
+                        song.coverUrl,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(song.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(
+                            song.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           const SizedBox(height: 4),
-                          Text(song.artist, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                          Text(
+                            song.artist,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                          ),
                         ],
                       ),
                     ),

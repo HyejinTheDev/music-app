@@ -453,14 +453,21 @@ class _FeedScreenState extends State<FeedScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
-        return Padding(
+        // Sử dụng AnimatedPadding để khung chat đẩy lên mượt mà theo bàn phím
+        return AnimatedPadding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
+            // CHÚ Ý: Phải dùng MediaQuery.of(sheetContext) ở đây thay vì context cũ
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
           ),
-          child: SizedBox(
+          duration: const Duration(milliseconds: 150), // Thời gian trượt
+          curve: Curves.easeOut,
+          child: Container( // Bọc thêm Container để set chiều cao và padding
+             padding: const EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+            ),
+            // Giữ nguyên chiều cao 60% màn hình
             height: MediaQuery.of(context).size.height * 0.6,
             child: Column(
               children: [

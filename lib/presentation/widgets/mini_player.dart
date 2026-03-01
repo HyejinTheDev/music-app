@@ -7,12 +7,16 @@ class MiniPlayer extends StatelessWidget {
   final Song song;
   final AudioPlayer player;
   final VoidCallback onDismissed;
+  final bool isFavorite;
+  final VoidCallback onToggleFavorite;
 
   const MiniPlayer({
     Key? key,
     required this.song,
     required this.player,
     required this.onDismissed,
+    required this.isFavorite,
+    required this.onToggleFavorite,
   }) : super(key: key);
 
   @override
@@ -26,8 +30,12 @@ class MiniPlayer extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              // TRUYỀN THÊM player VÀO ĐÂY NHÉ:
-              builder: (context) => SongDetailScreen(song: song, player: player),
+              builder: (context) => SongDetailScreen(
+                song: song,
+                player: player,
+                isFavorite: isFavorite,
+                onToggleFavorite: onToggleFavorite,
+              ),
             ),
           );
         },
@@ -39,7 +47,11 @@ class MiniPlayer extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white10),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 15, offset: const Offset(0, 5))
+              BoxShadow(
+                color: Colors.black.withOpacity(0.6),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              ),
             ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -49,7 +61,12 @@ class MiniPlayer extends StatelessWidget {
                 tag: 'current_artwork',
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(35),
-                  child: Image.network(song.coverUrl, width: 45, height: 45, fit: BoxFit.cover),
+                  child: Image.network(
+                    song.coverUrl,
+                    width: 45,
+                    height: 45,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -60,12 +77,18 @@ class MiniPlayer extends StatelessWidget {
                   children: [
                     Text(
                       song.title,
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     Text(
                       song.artist,
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
@@ -85,9 +108,15 @@ class MiniPlayer extends StatelessWidget {
                     radius: 18,
                     child: IconButton(
                       padding: EdgeInsets.zero,
-                      icon: Icon(playing ? Icons.pause : Icons.play_arrow, color: Colors.black),
+                      icon: Icon(
+                        playing ? Icons.pause : Icons.play_arrow,
+                        color: Colors.black,
+                      ),
                       onPressed: () {
-                        if (playing) player.pause(); else player.play();
+                        if (playing)
+                          player.pause();
+                        else
+                          player.play();
                       },
                     ),
                   );

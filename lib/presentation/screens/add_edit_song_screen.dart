@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/song_model.dart';
 import '../../logic/song_bloc/song_bloc.dart';
 import '../../logic/song_bloc/song_event.dart';
@@ -28,7 +29,9 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
     _titleController = TextEditingController(text: widget.song?.title ?? '');
     _artistController = TextEditingController(text: widget.song?.artist ?? '');
     _lyricsController = TextEditingController(text: widget.song?.lyrics ?? '');
-    _audioUrlController = TextEditingController(text: widget.song?.audioUrl ?? ''); // <--- 2. Đã thêm khởi tạo
+    _audioUrlController = TextEditingController(
+      text: widget.song?.audioUrl ?? '',
+    ); // <--- 2. Đã thêm khởi tạo
   }
 
   @override
@@ -36,7 +39,8 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
     _titleController.dispose();
     _artistController.dispose();
     _lyricsController.dispose();
-    _audioUrlController.dispose(); // <--- 3. Đã thêm dispose (giải phóng bộ nhớ)
+    _audioUrlController
+        .dispose(); // <--- 3. Đã thêm dispose (giải phóng bộ nhớ)
     super.dispose();
   }
 
@@ -96,7 +100,7 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
                   labelText: "Link nhạc (MP3 URL) (*)",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.link),
-                  hintText: "Dán link .mp3 vào đây"
+                  hintText: "Dán link .mp3 vào đây",
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -132,11 +136,15 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
                     if (_formKey.currentState!.validate()) {
                       // 2. Tạo đối tượng Song từ dữ liệu nhập
                       final song = Song(
-                        id: widget.song?.id, // Giữ ID cũ nếu là Sửa
+                        id: widget.song?.id,
                         title: _titleController.text,
                         artist: _artistController.text,
                         lyrics: _lyricsController.text,
-                        audioUrl: _audioUrlController.text, // <--- Đã có dữ liệu
+                        audioUrl: _audioUrlController.text,
+                        // Giữ userId cũ nếu sửa, hoặc gán userId mới nếu thêm
+                        userId:
+                            widget.song?.userId ??
+                            FirebaseAuth.instance.currentUser?.uid,
                       );
 
                       // 3. Gửi sự kiện tới BLoC
@@ -152,10 +160,13 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
                   },
                   child: Text(
                     isEditing ? "CẬP NHẬT" : "LƯU BÀI HÁT",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),

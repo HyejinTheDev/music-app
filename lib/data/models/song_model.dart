@@ -3,14 +3,16 @@ class Song {
   final String title;
   final String artist;
   final String lyrics;
-  final String audioUrl; // <--- THÊM DÒNG NÀY
+  final String audioUrl;
+  final String? userId; // UID của người đăng bài hát
 
   Song({
     this.id,
     required this.title,
     required this.artist,
     required this.lyrics,
-    required this.audioUrl, // <--- THÊM DÒNG NÀY
+    required this.audioUrl,
+    this.userId,
   });
 
   Map<String, dynamic> toMap() {
@@ -19,7 +21,8 @@ class Song {
       'title': title,
       'artist': artist,
       'lyrics': lyrics,
-      'audio_url': audioUrl, // <--- THÊM DÒNG NÀY
+      'audio_url': audioUrl,
+      'user_id': userId,
     };
   }
 
@@ -29,12 +32,13 @@ class Song {
       title: map['title'],
       artist: map['artist'],
       lyrics: map['lyrics'],
-      audioUrl: map['audio_url'] ?? '', // <--- THÊM (Nếu null thì để rỗng)
+      audioUrl: map['audio_url'] ?? '',
+      userId: map['user_id'],
     );
   }
+
   String get coverUrl {
-    // Nếu id null thì lấy số 1, ngược lại lấy id
-    final seed = id ?? 1; 
-    return "https://picsum.photos/seed/$seed/200/200"; 
+    final seed = id ?? 1;
+    return "https://picsum.photos/seed/$seed/200/200";
   }
 }

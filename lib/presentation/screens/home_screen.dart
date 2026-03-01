@@ -147,6 +147,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: MiniPlayer(
                       song: _currentSong!,
                       player: _player,
+                      isFavorite: _likedSongIds.contains(
+                        _currentSong!.id.toString(),
+                      ),
+                      onToggleFavorite: () {
+                        setState(() {
+                          final songIdStr = _currentSong!.id.toString();
+                          if (_likedSongIds.contains(songIdStr)) {
+                            _likedSongIds.remove(songIdStr);
+                            _favoriteSongs.removeWhere(
+                              (s) => s.id == _currentSong!.id,
+                            );
+                          } else {
+                            _likedSongIds.add(songIdStr);
+                            _favoriteSongs.add(_currentSong!);
+                          }
+                        });
+                      },
                       onDismissed: () {
                         _player.stop();
                         setState(() => _currentSong = null);
