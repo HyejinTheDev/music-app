@@ -7,6 +7,8 @@ class SongDetailScreen extends StatefulWidget {
   final AudioPlayer player;
   final bool isFavorite;
   final VoidCallback onToggleFavorite;
+  final List<Song> songs; // Danh sách bài hát để chuyển bài
+  final Function(Song)? onSongChanged; // Callback khi đổi bài
 
   const SongDetailScreen({
     Key? key,
@@ -14,6 +16,8 @@ class SongDetailScreen extends StatefulWidget {
     required this.player,
     required this.isFavorite,
     required this.onToggleFavorite,
+    this.songs = const [],
+    this.onSongChanged,
   }) : super(key: key);
 
   @override
@@ -24,11 +28,13 @@ class _SongDetailScreenState extends State<SongDetailScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late bool _isFavorite;
+  late Song _currentSong;
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.isFavorite;
+    _currentSong = widget.song;
 
     _animationController = AnimationController(
       vsync: this,
@@ -66,6 +72,45 @@ class _SongDetailScreenState extends State<SongDetailScreen>
     return "$minutes:$seconds";
   }
 
+  // --- CHUYỂN BÀI NGAY TẠI MÀN HÌNH NÀY ---
+  Future<void> _switchSong(Song newSong) async {
+    try {
+      setState(() => _currentSong = newSong);
+      await widget.player.stop();
+      if (newSong.audioUrl.isNotEmpty) {
+        await widget.player.setUrl(newSong.audioUrl);
+        widget.player.play();
+      }
+      // Thông báo cho HomeScreen cập nhật _currentSong
+      widget.onSongChanged?.call(newSong);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Lỗi phát nhạc: $e")));
+      }
+    }
+  }
+
+  void _nextSong() {
+    if (widget.songs.isEmpty) return;
+    final currentIndex = widget.songs.indexWhere(
+      (s) => s.id == _currentSong.id,
+    );
+    final nextIndex = (currentIndex + 1) % widget.songs.length;
+    _switchSong(widget.songs[nextIndex]);
+  }
+
+  void _previousSong() {
+    if (widget.songs.isEmpty) return;
+    final currentIndex = widget.songs.indexWhere(
+      (s) => s.id == _currentSong.id,
+    );
+    final prevIndex =
+        (currentIndex - 1 + widget.songs.length) % widget.songs.length;
+    _switchSong(widget.songs[prevIndex]);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,12 +131,6 @@ class _SongDetailScreenState extends State<SongDetailScreen>
           style: TextStyle(color: Colors.white70, fontSize: 14),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SafeArea(
         child: Column(
@@ -122,7 +161,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>
                     children: [
                       ClipOval(
                         child: Image.network(
-                          widget.song.coverUrl,
+                          _currentSong.coverUrl,
                           width: 300,
                           height: 300,
                           fit: BoxFit.cover,
@@ -164,7 +203,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.song.title,
+                          _currentSong.title,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -175,7 +214,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          widget.song.artist,
+                          _currentSong.artist,
                           style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 16,
@@ -292,16 +331,28 @@ class _SongDetailScreenState extends State<SongDetailScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.shuffle, color: Colors.white54),
-                    onPressed: () {},
+                    icon: const Icon(
+                      Icons.replay_10,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    onPressed: () {
+                      final current = widget.player.position;
+                      final newPos = current - const Duration(seconds: 10);
+                      widget.player.seek(
+                        newPos < Duration.zero ? Duration.zero : newPos,
+                      );
+                    },
                   ),
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.skip_previous,
-                      color: Colors.white,
+                      color: widget.songs.isNotEmpty
+                          ? Colors.white
+                          : Colors.white38,
                       size: 40,
                     ),
-                    onPressed: () {},
+                    onPressed: widget.songs.isNotEmpty ? _previousSong : null,
                   ),
 
                   StreamBuilder<PlayerState>(
@@ -332,16 +383,27 @@ class _SongDetailScreenState extends State<SongDetailScreen>
                   ),
 
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.skip_next,
-                      color: Colors.white,
+                      color: widget.songs.isNotEmpty
+                          ? Colors.white
+                          : Colors.white38,
                       size: 40,
                     ),
-                    onPressed: () {},
+                    onPressed: widget.songs.isNotEmpty ? _nextSong : null,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.repeat, color: Colors.white54),
-                    onPressed: () {},
+                    icon: const Icon(
+                      Icons.forward_10,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    onPressed: () {
+                      final current = widget.player.position;
+                      final total = widget.player.duration ?? Duration.zero;
+                      final newPos = current + const Duration(seconds: 10);
+                      widget.player.seek(newPos > total ? total : newPos);
+                    },
                   ),
                 ],
               ),

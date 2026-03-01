@@ -89,6 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           // 2. Gửi gói dữ liệu lên collection 'posts' của Firestore
           await FirebaseFirestore.instance.collection('posts').add({
+            'userId': user?.uid,
             'userName': user?.displayName ?? "Người dùng ẩn danh",
             'userAvatar': user?.photoURL ?? "https://i.pravatar.cc/150?img=12",
             'caption': caption,
@@ -164,6 +165,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           }
                         });
                       },
+                      songs: state.songs,
+                      onSongChanged: (newSong) => _playMusic(newSong),
                       onDismissed: () {
                         _player.stop();
                         setState(() => _currentSong = null);
@@ -318,22 +321,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Text(
-            "Xem tất cả",
-            style: TextStyle(color: Colors.tealAccent, fontSize: 14),
-          ),
-        ],
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -383,48 +377,99 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAlbumBanner(List<Song> songs) {
     return SizedBox(
       height: 190,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: songs.length,
-        itemBuilder: (context, index) => GestureDetector(
-          onTap: () => _playMusic(songs[index]),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            width: 140,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    songs[index].coverUrl,
-                    width: 140,
-                    height: 140,
-                    fit: BoxFit.cover,
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('albums')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.tealAccent),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text(
+                "Chưa có album nào",
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+            );
+          }
+
+          final albums = snapshot.data!.docs;
+
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: albums.length,
+            itemBuilder: (context, index) {
+              final albumData = albums[index].data() as Map<String, dynamic>;
+              final title = albumData['title'] ?? 'Không tên';
+              final artist = albumData['artist'] ?? 'Nghệ sĩ';
+              final coverUrl = albumData['coverUrl'] ?? '';
+
+              return GestureDetector(
+                onTap: () {
+                  // Có thể mở trang chi tiết album ở đây sau này
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  width: 140,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          coverUrl,
+                          width: 140,
+                          height: 140,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                width: 140,
+                                height: 140,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[800],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.album,
+                                  color: Colors.white54,
+                                  size: 50,
+                                ),
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        artist,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  songs[index].title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  songs[index].artist,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ),
+              );
+            },
+          );
+        },
       ),
     );
   }

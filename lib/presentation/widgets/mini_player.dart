@@ -9,6 +9,8 @@ class MiniPlayer extends StatelessWidget {
   final VoidCallback onDismissed;
   final bool isFavorite;
   final VoidCallback onToggleFavorite;
+  final List<Song> songs;
+  final Function(Song)? onSongChanged;
 
   const MiniPlayer({
     Key? key,
@@ -17,7 +19,23 @@ class MiniPlayer extends StatelessWidget {
     required this.onDismissed,
     required this.isFavorite,
     required this.onToggleFavorite,
+    this.songs = const [],
+    this.onSongChanged,
   }) : super(key: key);
+
+  void _nextSong() {
+    if (songs.isEmpty) return;
+    final currentIndex = songs.indexWhere((s) => s.id == song.id);
+    final nextIndex = (currentIndex + 1) % songs.length;
+    onSongChanged?.call(songs[nextIndex]);
+  }
+
+  void _previousSong() {
+    if (songs.isEmpty) return;
+    final currentIndex = songs.indexWhere((s) => s.id == song.id);
+    final prevIndex = (currentIndex - 1 + songs.length) % songs.length;
+    onSongChanged?.call(songs[prevIndex]);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +53,8 @@ class MiniPlayer extends StatelessWidget {
                 player: player,
                 isFavorite: isFavorite,
                 onToggleFavorite: onToggleFavorite,
+                songs: songs,
+                onSongChanged: onSongChanged,
               ),
             ),
           );
@@ -96,7 +116,7 @@ class MiniPlayer extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.skip_previous, color: Colors.white),
-                onPressed: () {},
+                onPressed: songs.isNotEmpty ? _previousSong : null,
               ),
               // StreamBuilder tự động nghe trạng thái nhạc để đổi icon Play/Pause
               StreamBuilder<PlayerState>(
@@ -124,7 +144,7 @@ class MiniPlayer extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.skip_next, color: Colors.white),
-                onPressed: () {},
+                onPressed: songs.isNotEmpty ? _nextSong : null,
               ),
             ],
           ),

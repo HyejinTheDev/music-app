@@ -198,6 +198,7 @@ class _FeedScreenState extends State<FeedScreen> {
                                     await FirebaseFirestore.instance
                                         .collection('posts')
                                         .add({
+                                          'userId': user?.uid,
                                           'userName':
                                               user?.displayName ??
                                               "Người dùng ẩn danh",
@@ -461,12 +462,9 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
           duration: const Duration(milliseconds: 150), // Thời gian trượt
           curve: Curves.easeOut,
-          child: Container( // Bọc thêm Container để set chiều cao và padding
-             padding: const EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-            ),
+          child: Container(
+            // Bọc thêm Container để set chiều cao và padding
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 16),
             // Giữ nguyên chiều cao 60% màn hình
             height: MediaQuery.of(context).size.height * 0.6,
             child: Column(
@@ -753,7 +751,10 @@ class _FeedScreenState extends State<FeedScreen> {
               _formatTimestamp(data['timestamp']),
               style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
-            trailing: const Icon(Icons.more_horiz, color: Colors.grey),
+            trailing: GestureDetector(
+              onTap: () => _showPostOptionsMenu(context, data, docId),
+              child: const Icon(Icons.more_horiz, color: Colors.grey),
+            ),
           ),
 
           // 2. Caption
@@ -963,6 +964,333 @@ class _FeedScreenState extends State<FeedScreen> {
           Text(text, style: TextStyle(color: color, fontSize: 14)),
         ],
       ),
+    );
+  }
+
+  // =============================================
+  // MENU 3 CHẤM — CHỈ NGƯỜI ĐĂNG MỚI SỬA/XÓA ĐƯỢC
+  // =============================================
+  void _showPostOptionsMenu(
+    BuildContext context,
+    Map<String, dynamic> data,
+    String docId,
+  ) {
+    final user = FirebaseAuth.instance.currentUser;
+    final postUserId = data['userId'];
+    final isOwner =
+        user != null && postUserId != null && user.uid == postUserId;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Thanh kéo
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[600],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Chỉ hiện Sửa/Xóa cho chủ bài viết
+              if (isOwner) ...[
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.tealAccent),
+                  title: const Text(
+                    "Chỉnh sửa bài viết",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showEditPostSheet(data, docId);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
+                  title: const Text(
+                    "Xóa bài viết",
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _confirmDeletePost(docId);
+                  },
+                ),
+              ] else ...[
+                ListTile(
+                  leading: const Icon(
+                    Icons.flag_outlined,
+                    color: Colors.orangeAccent,
+                  ),
+                  title: const Text(
+                    "Báo cáo bài viết",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Đã gửi báo cáo. Cảm ơn bạn!"),
+                      ),
+                    );
+                  },
+                ),
+              ],
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // =============================================
+  // XÁC NHẬN XÓA BÀI VIẾT
+  // =============================================
+  void _confirmDeletePost(String docId) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Text(
+            "Xóa bài viết?",
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            "Bạn có chắc muốn xóa bài viết này? Hành động này không thể hoàn tác.",
+            style: TextStyle(color: Colors.grey),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                try {
+                  // Xóa tất cả bình luận con trước
+                  final commentsSnapshot = await FirebaseFirestore.instance
+                      .collection('posts')
+                      .doc(docId)
+                      .collection('comments')
+                      .get();
+                  for (final doc in commentsSnapshot.docs) {
+                    await doc.reference.delete();
+                  }
+                  // Xóa bài viết
+                  await FirebaseFirestore.instance
+                      .collection('posts')
+                      .doc(docId)
+                      .delete();
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Đã xóa bài viết!"),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text("Lỗi xóa bài: $e")));
+                  }
+                }
+              },
+              child: const Text(
+                "Xóa",
+                style: TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // =============================================
+  // BOTTOM SHEET CHỈNH SỬA BÀI VIẾT
+  // =============================================
+  void _showEditPostSheet(Map<String, dynamic> data, String docId) {
+    final captionController = TextEditingController(
+      text: data['caption'] ?? '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Thanh kéo
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[600],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Tiêu đề
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Chỉnh sửa bài viết",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('posts')
+                            .doc(docId)
+                            .update({'caption': captionController.text.trim()});
+                        Navigator.pop(sheetContext);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Đã cập nhật bài viết!"),
+                              backgroundColor: Colors.tealAccent,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Lỗi cập nhật: $e")),
+                        );
+                      }
+                    },
+                    child: const Text(
+                      "Lưu",
+                      style: TextStyle(
+                        color: Colors.tealAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Hiển thị bài hát đang chia sẻ (chỉ xem, không sửa)
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        data['songCoverUrl'] ?? '',
+                        width: 45,
+                        height: 45,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 45,
+                          height: 45,
+                          color: Colors.grey[800],
+                          child: const Icon(
+                            Icons.music_note,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data['songTitle'] ?? '',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            data['songArtist'] ?? '',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Ô chỉnh sửa caption
+              TextField(
+                controller: captionController,
+                style: const TextStyle(color: Colors.white),
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: "Nội dung bài viết...",
+                  hintStyle: TextStyle(color: Colors.grey[500]),
+                  filled: true,
+                  fillColor: Colors.black26,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
   }
 }
