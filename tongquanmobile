@@ -1,0 +1,53 @@
+# Cập nhật Feed Screen: Bình luận, Lưu Playlist, Thêm bài viết
+
+Người dùng yêu cầu 3 thay đổi trên trang Feed:
+1. **Bình luận** — Nút bình luận mở bottom sheet cho phép xem và thêm bình luận
+2. **Đổi nút Chia sẻ → Lưu vào Playlist** — Thay nút "Chia sẻ" thành "Lưu" để lưu bài hát vào danh sách yêu thích
+3. **Nút (+) thêm bài viết** — Nút cộng ở header mở dialog/bottom sheet chọn bài hát và viết caption để đăng bài mới
+
+## Proposed Changes
+
+### Feed Screen
+
+#### [MODIFY] [feed_screen.dart](file:///c:/Mobile/music_app/lib/presentation/screens/feed_screen.dart)
+
+1. **Thêm Comment model** — Thêm class `Comment` đơn giản (userName, text, timeAgo) và thêm field `List<Comment> commentList` vào [Post](file:///c:/Mobile/music_app/lib/presentation/screens/feed_screen.dart#7-28)
+
+2. **Bottom sheet bình luận** — Tạo method `_showCommentSheet(Post post)` hiển thị `showModalBottomSheet` với:
+   - Danh sách bình luận hiện có
+   - TextField để nhập bình luận mới + nút gửi
+   - Cập nhật `post.comments` count khi thêm bình luận
+
+3. **Đổi nút Chia sẻ → Lưu vào Playlist** — Thay icon `Icons.share_outlined` + text "Chia sẻ" thành `Icons.playlist_add` + text "Lưu". Khi bấm, gọi callback `onSaveToPlaylist(song)` truyền lên [HomeScreen](file:///c:/Mobile/music_app/lib/presentation/screens/home_screen.dart#22-28)
+
+4. **Nút (+) tạo bài viết** — Khi bấm nút `add_box_outlined` ở header, mở `_showCreatePostSheet()`:
+   - Bottom sheet với TextField caption
+   - Danh sách bài hát để chọn (cần truyền `List<Song>` vào FeedScreen)
+   - Nút "Đăng bài" tạo Post mới
+
+5. **Thêm parameters** — FeedScreen cần thêm:
+   - `List<Song> allSongs` — cho dialog tạo bài viết
+   - `Function(Song) onSaveToPlaylist` — callback lưu bài hát
+   - `Function(Post) onAddPost` — callback thêm bài viết mới
+
+---
+
+### Home Screen
+
+#### [MODIFY] [home_screen.dart](file:///c:/Mobile/music_app/lib/presentation/screens/home_screen.dart)
+
+1. **Cập nhật FeedScreen constructor** — Truyền thêm:
+   - `allSongs: state.songs`
+   - `onSaveToPlaylist: (song) { ... }` — thêm vào `_favoriteSongs`
+   - `onAddPost: (post) { ... }` — thêm vào `_feedPosts`
+
+## Verification Plan
+
+### Manual Verification
+Vì đây là ứng dụng Flutter mobile, cần test thủ công:
+
+1. **Chạy app**: `flutter run` trên emulator hoặc thiết bị
+2. **Test bình luận**: Vào tab Feed → bấm nút bình luận → kiểm tra bottom sheet mở ra → nhập bình luận → bấm gửi → kiểm tra comment count tăng
+3. **Test lưu playlist**: Bấm nút "Lưu" trên bài viết → kiểm tra bài hát xuất hiện trong tab Library
+4. **Test tạo bài viết**: Bấm nút (+) ở header → chọn bài hát → nhập caption → bấm Đăng → kiểm tra bài viết mới xuất hiện trong feed
+5. **Build check**: Chạy `flutter analyze` để kiểm tra không có lỗi compilation
