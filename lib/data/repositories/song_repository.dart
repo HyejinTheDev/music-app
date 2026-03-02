@@ -49,4 +49,15 @@ class SongRepository {
       }
     }
   }
+
+  /// Cập nhật uploader_name cho tất cả bài hát của user
+  Future<void> updateUploaderName(String userId, String newName) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'songs',
+      {'uploader_name': newName},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
+  }
 }

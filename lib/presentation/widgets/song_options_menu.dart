@@ -9,21 +9,40 @@ import '../../logic/song_list/song_list_bloc.dart';
 import '../../logic/song_list/song_list_event.dart';
 import '../../logic/song_bloc/song_bloc.dart';
 import '../../logic/song_bloc/song_event.dart' hide LoadSongs;
+import '../../logic/favorites/favorites_bloc.dart';
+import '../../logic/favorites/favorites_event.dart';
+import '../../logic/favorites/favorites_state.dart';
+import '../../logic/player/player_bloc.dart';
+import '../../logic/player/player_event.dart';
+import '../../logic/feed/feed_bloc.dart';
+import '../../logic/feed/feed_event.dart';
 import '../screens/add_edit_song_screen.dart';
 
 // Hàm chính gọi Menu
 void showSongOptionsMenu({
   required BuildContext context,
   required Song song,
-  required List<String> likedSongIds,
-  required List<Song> favoriteSongs,
-  required AudioPlayer player,
-  required Song? currentSong,
-  required VoidCallback onStateChanged,
-  required VoidCallback onClearCurrentSong,
-  required Function(Song, String)
-  onShareToFeed, // Hàm nhận sự kiện Chia sẻ bài lên Feed
+  List<String>? likedSongIds,
+  List<Song>? favoriteSongs,
+  VoidCallback? onStateChanged,
 }) {
+  // Đọc từ BLoC nếu không truyền vào
+  final favState = context.read<FavoritesBloc>().state;
+  final effectiveLikedIds =
+      likedSongIds ??
+      (favState is FavoritesLoaded
+          ? favState.likedSongIds.toList()
+          : <String>[]);
+  final effectiveFavSongs =
+      favoriteSongs ??
+      (favState is FavoritesLoaded
+          ? favState.favoriteSongs.toList()
+          : <Song>[]);
+  final playerBloc = context.read<PlayerBloc>();
+  final playerState = playerBloc.state;
+  final player = playerBloc.player;
+  final currentSong = playerState.currentSong;
+
   showModalBottomSheet(
     context: context,
     backgroundColor: const Color(0xFF1E1E1E),
@@ -36,8 +55,8 @@ void showSongOptionsMenu({
         child: StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             final songIdStr = song.id?.toString() ?? '';
-            final isLiked = likedSongIds.contains(songIdStr);
-            final isInPlaylist = favoriteSongs.contains(song);
+            final isLiked = effectiveLikedIds.contains(songIdStr);
+            final isInPlaylist = effectiveFavSongs.contains(song);
 
             return SingleChildScrollView(
               child: Wrap(
@@ -79,12 +98,8 @@ void showSongOptionsMenu({
                       ),
                     ),
                     onTap: () {
-                      setModalState(() {
-                        isLiked
-                            ? likedSongIds.remove(songIdStr)
-                            : likedSongIds.add(songIdStr);
-                      });
-                      onStateChanged();
+                      context.read<FavoritesBloc>().add(ToggleFavorite(song));
+                      Navigator.pop(context);
                     },
                   ),
 
@@ -102,19 +117,17 @@ void showSongOptionsMenu({
                       ),
                     ),
                     onTap: () {
+                      context.read<FavoritesBloc>().add(ToggleFavorite(song));
                       Navigator.pop(context);
-                      if (isInPlaylist) {
-                        favoriteSongs.remove(song);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Đã xóa khỏi Thư viện")),
-                        );
-                      } else {
-                        favoriteSongs.add(song);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Đã thêm vào Thư viện")),
-                        );
-                      }
-                      onStateChanged();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isInPlaylist
+                                ? "Đã xóa khỏi Thư viện"
+                                : "Đã thêm vào Thư viện",
+                          ),
+                        ),
+                      );
                     },
                   ),
 
@@ -125,24 +138,17 @@ void showSongOptionsMenu({
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
+                      final feedBloc = context.read<FeedBloc>();
+                      final navContext = Navigator.of(context).context;
                       Navigator.pop(context); // Đóng menu 3 chấm
-                      _showShareBottomSheet(
-                        context,
-                        song,
-                        onShareToFeed,
-                      ); // MỞ GIAO DIỆN CHIA SẺ MỚI
-                    },
-                  ),
-
-                  ListTile(
-                    leading: const Icon(Icons.comment, color: Colors.white),
-                    title: const Text(
-                      'Xem bình luận',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showCommentsBottomSheet(context, song);
+                      _showShareBottomSheet(navContext, song, (
+                        sharedSong,
+                        caption,
+                      ) {
+                        feedBloc.add(
+                          CreatePost(caption: caption, song: sharedSong),
+                        );
+                      });
                     },
                   ),
 
@@ -208,7 +214,7 @@ void showSongOptionsMenu({
                         context.read<SongListBloc>().add(LoadSongs());
                         if (currentSong?.id == song.id) {
                           player.stop();
-                          onClearCurrentSong();
+                          playerBloc.add(StopRequested());
                         }
                       },
                     ),

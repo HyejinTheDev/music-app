@@ -4,9 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/song_model.dart';
 import '../../logic/song_bloc/song_bloc.dart';
 import '../../logic/song_bloc/song_event.dart';
+import '../../logic/song_list/song_list_bloc.dart';
+import '../../logic/song_list/song_list_event.dart' as sle;
 
 class AddEditSongScreen extends StatefulWidget {
-  final Song? song; // Nếu có song truyền vào thì là Sửa, nếu null thì là Thêm
+  final Song? song;
   const AddEditSongScreen({super.key, this.song});
 
   @override
@@ -14,24 +16,26 @@ class AddEditSongScreen extends StatefulWidget {
 }
 
 class _AddEditSongScreenState extends State<AddEditSongScreen> {
-  // Key để quản lý Form và Validate
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _titleController;
   late TextEditingController _artistController;
   late TextEditingController _lyricsController;
-  late TextEditingController _audioUrlController; // <--- 1. Đã thêm khai báo
+  late TextEditingController _audioUrlController;
+  late TextEditingController _coverUrlController;
 
   @override
   void initState() {
     super.initState();
-    // Khởi tạo Controller, nếu có dữ liệu cũ (Sửa) thì điền vào luôn
     _titleController = TextEditingController(text: widget.song?.title ?? '');
     _artistController = TextEditingController(text: widget.song?.artist ?? '');
     _lyricsController = TextEditingController(text: widget.song?.lyrics ?? '');
     _audioUrlController = TextEditingController(
       text: widget.song?.audioUrl ?? '',
-    ); // <--- 2. Đã thêm khởi tạo
+    );
+    _coverUrlController = TextEditingController(
+      text: widget.song?.coverImageUrl ?? '',
+    );
   }
 
   @override
@@ -39,9 +43,37 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
     _titleController.dispose();
     _artistController.dispose();
     _lyricsController.dispose();
-    _audioUrlController
-        .dispose(); // <--- 3. Đã thêm dispose (giải phóng bộ nhớ)
+    _audioUrlController.dispose();
+    _coverUrlController.dispose();
     super.dispose();
+  }
+
+  void _saveSong() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final coverUrl = _coverUrlController.text.trim();
+    final song = Song(
+      id: widget.song?.id,
+      title: _titleController.text,
+      artist: _artistController.text,
+      lyrics: _lyricsController.text,
+      audioUrl: _audioUrlController.text,
+      userId: widget.song?.userId ?? FirebaseAuth.instance.currentUser?.uid,
+      uploaderName:
+          widget.song?.uploaderName ??
+          FirebaseAuth.instance.currentUser?.displayName,
+      coverImageUrl: coverUrl.isNotEmpty ? coverUrl : null,
+    );
+
+    final isEditing = widget.song != null;
+    if (isEditing) {
+      context.read<SongBloc>().add(UpdateSongEvent(song));
+    } else {
+      context.read<SongBloc>().add(AddSongEvent(song));
+    }
+
+    context.read<SongListBloc>().add(sle.LoadSongs());
+    Navigator.pop(context);
   }
 
   @override
@@ -55,10 +87,22 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
-          key: _formKey, // Gắn key vào Form
+          key: _formKey,
           child: ListView(
             children: [
-              // Ô nhập Tên bài hát
+              // --- LINK ẢNH BÌA ---
+              TextFormField(
+                controller: _coverUrlController,
+                decoration: const InputDecoration(
+                  labelText: "Link ảnh bìa (URL)",
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.image),
+                  hintText: "Dán link ảnh vào đây",
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // --- TÊN BÀI HÁT ---
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
@@ -66,7 +110,6 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.audio_file),
                 ),
-                // Validate: Không được để trống
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return "Vui lòng nhập tên bài hát";
@@ -76,7 +119,7 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Ô nhập Ca sĩ
+              // --- CA SĨ ---
               TextFormField(
                 controller: _artistController,
                 decoration: const InputDecoration(
@@ -93,7 +136,7 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Ô nhập Link nhạc (Mới thêm)
+              // --- LINK NHẠC ---
               TextFormField(
                 controller: _audioUrlController,
                 decoration: const InputDecoration(
@@ -111,7 +154,7 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Ô nhập Lời bài hát
+              // --- LỜI BÀI HÁT ---
               TextFormField(
                 controller: _lyricsController,
                 decoration: const InputDecoration(
@@ -119,11 +162,11 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
-                maxLines: 8, // Cho phép nhập nhiều dòng
+                maxLines: 8,
               ),
               const SizedBox(height: 24),
 
-              // Nút Lưu
+              // --- NÚT LƯU ---
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
@@ -131,33 +174,7 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () {
-                    // 1. Kiểm tra Validate
-                    if (_formKey.currentState!.validate()) {
-                      // 2. Tạo đối tượng Song từ dữ liệu nhập
-                      final song = Song(
-                        id: widget.song?.id,
-                        title: _titleController.text,
-                        artist: _artistController.text,
-                        lyrics: _lyricsController.text,
-                        audioUrl: _audioUrlController.text,
-                        // Giữ userId cũ nếu sửa, hoặc gán userId mới nếu thêm
-                        userId:
-                            widget.song?.userId ??
-                            FirebaseAuth.instance.currentUser?.uid,
-                      );
-
-                      // 3. Gửi sự kiện tới BLoC
-                      if (isEditing) {
-                        context.read<SongBloc>().add(UpdateSongEvent(song));
-                      } else {
-                        context.read<SongBloc>().add(AddSongEvent(song));
-                      }
-
-                      // 4. Quay về màn hình danh sách
-                      Navigator.pop(context);
-                    }
-                  },
+                  onPressed: _saveSong,
                   child: Text(
                     isEditing ? "CẬP NHẬT" : "LƯU BÀI HÁT",
                     style: const TextStyle(

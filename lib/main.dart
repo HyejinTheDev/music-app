@@ -19,6 +19,9 @@ import 'logic/feed/feed_bloc.dart';
 import 'logic/album/album_bloc.dart';
 import 'logic/banner/banner_bloc.dart';
 import 'logic/banner/banner_event.dart';
+import 'logic/profile/profile_bloc.dart';
+import 'logic/profile/profile_event.dart';
+import 'logic/history/history_bloc.dart';
 
 // --- Screens ---
 import 'presentation/screens/login_screen.dart';
@@ -61,6 +64,7 @@ class MyApp extends StatelessWidget {
           BlocProvider<AuthBloc>(create: (_) => AuthBloc()),
           BlocProvider<PlayerBloc>(create: (_) => PlayerBloc()),
           BlocProvider<FavoritesBloc>(create: (_) => FavoritesBloc()),
+          BlocProvider<HistoryBloc>(create: (_) => HistoryBloc()),
           BlocProvider<FeedBloc>(
             create: (context) =>
                 FeedBloc(postRepository: context.read<PostRepository>()),
@@ -71,6 +75,11 @@ class MyApp extends StatelessWidget {
           ),
           BlocProvider<BannerBloc>(
             create: (_) => BannerBloc()..add(LoadBanners()),
+          ),
+          BlocProvider<ProfileBloc>(
+            create: (context) =>
+                ProfileBloc(songRepository: context.read<SongRepository>())
+                  ..add(LoadProfile()),
           ),
         ],
         child: MaterialApp(

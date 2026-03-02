@@ -21,7 +21,12 @@ class SongItem extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.network(song.coverUrl, width: 50, height: 50, fit: BoxFit.cover),
+        child: Image.network(
+          song.coverUrl,
+          width: 50,
+          height: 50,
+          fit: BoxFit.cover,
+        ),
       ),
       title: Text(
         song.title,
@@ -30,12 +35,22 @@ class SongItem extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-      subtitle: Text(song.artist, style: const TextStyle(color: Colors.grey)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(song.artist, style: const TextStyle(color: Colors.grey)),
+          if (song.uploaderName != null && song.uploaderName!.isNotEmpty)
+            Text(
+              "Đăng bởi: ${song.uploaderName}",
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
+            ),
+        ],
+      ),
       trailing: IconButton(
         icon: const Icon(Icons.more_vert, color: Colors.grey),
-        onPressed: onOptionsTap, // Gọi hàm mở menu 3 chấm
+        onPressed: onOptionsTap,
       ),
-      onTap: onTap, // Gọi hàm phát nhạc
+      onTap: onTap,
     );
   }
 }

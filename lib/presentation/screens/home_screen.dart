@@ -12,8 +12,9 @@ import '../../logic/player/player_event.dart';
 import '../../logic/favorites/favorites_bloc.dart';
 import '../../logic/favorites/favorites_state.dart';
 import '../../logic/favorites/favorites_event.dart';
-import '../../logic/feed/feed_bloc.dart';
-import '../../logic/feed/feed_event.dart';
+import '../../logic/history/history_bloc.dart';
+import '../../logic/history/history_event.dart';
+
 import '../../data/models/song_model.dart';
 import '../../data/repositories/album_repository.dart';
 
@@ -22,6 +23,7 @@ import 'search_screens.dart';
 import 'profile_screen.dart';
 import 'feed_screen.dart';
 import 'library_screen.dart';
+import 'album_detail_screen.dart';
 import '../widgets/song_options_menu.dart';
 import '../widgets/song_item.dart';
 import '../widgets/mini_player.dart';
@@ -45,56 +47,57 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- HÀM XỬ LÝ MENU 3 CHẤM ---
   void _handleShowOptions(BuildContext context, Song song) {
     final favState = context.read<FavoritesBloc>().state;
-    final playerBloc = context.read<PlayerBloc>();
-    final playerState = playerBloc.state;
 
     showSongOptionsMenu(
       context: context,
       song: song,
       likedSongIds: favState.likedSongIds.toList(),
       favoriteSongs: favState.favoriteSongs.toList(),
-      player: playerBloc.player,
-      currentSong: playerState.currentSong,
       onStateChanged: () => setState(() {}),
-      onClearCurrentSong: () => playerBloc.add(StopRequested()),
-      onShareToFeed: (sharedSong, caption) {
-        context.read<FeedBloc>().add(
-          CreatePost(caption: caption, song: sharedSong),
-        );
-      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      bottomNavigationBar: _buildBottomNavBar(),
-      body: BlocBuilder<SongListBloc, SongListState>(
-        builder: (context, songListState) {
-          if (songListState is SongListLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.tealAccent),
-            );
-          }
+    return BlocListener<PlayerBloc, PlayerState>(
+      listenWhen: (prev, curr) =>
+          curr is PlayerPlaying && prev.currentSong?.id != curr.currentSong?.id,
+      listener: (context, state) {
+        if (state.currentSong != null) {
+          context.read<HistoryBloc>().add(AddToHistory(state.currentSong!));
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        bottomNavigationBar: _buildBottomNavBar(),
+        body: BlocBuilder<SongListBloc, SongListState>(
+          builder: (context, songListState) {
+            if (songListState is SongListLoading) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.tealAccent),
+              );
+            }
 
-          if (songListState is SongListLoaded) {
-            // Cập nhật playlist cho PlayerBloc
-            context.read<PlayerBloc>().add(UpdatePlaylist(songListState.songs));
+            if (songListState is SongListLoaded) {
+              // Cập nhật playlist cho PlayerBloc
+              context.read<PlayerBloc>().add(
+                UpdatePlaylist(songListState.songs),
+              );
 
-            return _buildMainContent(songListState);
-          }
+              return _buildMainContent(songListState);
+            }
 
-          if (songListState is SongListError) {
-            return Center(
-              child: Text(
-                "Lỗi: ${songListState.message}",
-                style: const TextStyle(color: Colors.white),
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+            if (songListState is SongListError) {
+              return Center(
+                child: Text(
+                  "Lỗi: ${songListState.message}",
+                  style: const TextStyle(color: Colors.white),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }
@@ -165,20 +168,9 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
 
-      SearchScreen(
-        songs: songListState.songs,
-        currentSong: playerState.currentSong,
-        player: context.read<PlayerBloc>().player,
-        onPlaySong: _playMusic,
-        onOptionsTap: (song) => _handleShowOptions(context, song),
-      ),
+      const SearchScreen(),
 
-      LibraryScreen(
-        favoriteSongs: favState.favoriteSongs.toList(),
-        currentSong: playerState.currentSong,
-        onPlaySong: _playMusic,
-        onOptionsTap: (song) => _handleShowOptions(context, song),
-      ),
+      const LibraryScreen(),
 
       const ProfileScreen(),
     ];
@@ -367,7 +359,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
               return GestureDetector(
                 onTap: () {
-                  // Có thể mở trang chi tiết album ở đây sau này
+                  final songIds = List<String>.from(albumData['songIds'] ?? []);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AlbumDetailScreen(
+                        albumTitle: title,
+                        albumArtist: artist,
+                        albumCoverUrl: coverUrl,
+                        songIds: songIds,
+                      ),
+                    ),
+                  );
                 },
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 8),

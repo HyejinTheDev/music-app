@@ -19,7 +19,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'music_app.db');
     return await openDatabase(
       path,
-      version: 2, // Nâng version từ 1 lên 2 để chạy migration
+      version: 4, // Version 4: thêm cột cover_image_url
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE songs(
@@ -28,14 +28,21 @@ class DatabaseHelper {
             artist TEXT,
             lyrics TEXT,
             audio_url TEXT,
-            user_id TEXT
+            user_id TEXT,
+            uploader_name TEXT,
+            cover_image_url TEXT
           )
         ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        // Migration: thêm cột user_id cho database cũ (version 1)
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE songs ADD COLUMN user_id TEXT');
+        }
+        if (oldVersion < 3) {
+          await db.execute('ALTER TABLE songs ADD COLUMN uploader_name TEXT');
+        }
+        if (oldVersion < 4) {
+          await db.execute('ALTER TABLE songs ADD COLUMN cover_image_url TEXT');
         }
       },
     );
