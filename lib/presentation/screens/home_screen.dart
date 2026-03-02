@@ -1,18 +1,21 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:just_audio/just_audio.dart';
-
-// --- THÊM 2 IMPORT FIREBASE VÀO ĐÂY ---
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 // --- LOGIC IMPORTS ---
 import '../../logic/song_list/song_list_bloc.dart';
 import '../../logic/song_list/song_list_state.dart';
 import '../../logic/song_list/song_list_event.dart';
-import '../../logic/song_bloc/song_bloc.dart';
-import '../../logic/song_bloc/song_event.dart' hide LoadSongs;
+import '../../logic/player/player_bloc.dart';
+import '../../logic/player/player_state.dart';
+import '../../logic/player/player_event.dart';
+import '../../logic/favorites/favorites_bloc.dart';
+import '../../logic/favorites/favorites_state.dart';
+import '../../logic/favorites/favorites_event.dart';
+import '../../logic/feed/feed_bloc.dart';
+import '../../logic/feed/feed_event.dart';
 import '../../data/models/song_model.dart';
+import '../../data/repositories/album_repository.dart';
 
 // --- SCREENS & WIDGETS IMPORTS ---
 import 'search_screens.dart';
@@ -22,6 +25,7 @@ import 'library_screen.dart';
 import '../widgets/song_options_menu.dart';
 import '../widgets/song_item.dart';
 import '../widgets/mini_player.dart';
+import '../widgets/promo_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -31,86 +35,32 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Máy phát nhạc chính của toàn ứng dụng
-  final AudioPlayer _player = AudioPlayer();
   int _selectedIndex = 0;
-  Song? _currentSong;
 
-  // --- NƠI ĐỰNG DỮ LIỆU TẠM THỜI ---
-  final List<String> _likedSongIds = []; // Chú ý: Đây phải là List<String> nha
-  final List<Song> _favoriteSongs = [];
-  // GHI CHÚ: Đã xóa _feedPosts vì bây giờ FeedScreen sẽ tự động lấy dữ liệu từ Firebase
-
-  @override
-  void dispose() {
-    _player.dispose();
-    super.dispose();
+  // --- HÀM PHÁT NHẠC QUA BLOC ---
+  void _playMusic(Song song) {
+    context.read<PlayerBloc>().add(PlaySongRequested(song));
   }
 
-  Future<void> _playMusic(Song song) async {
-    try {
-      if (_currentSong?.id == song.id) {
-        if (_player.playing)
-          _player.pause();
-        else
-          _player.play();
-        return;
-      }
-      setState(() => _currentSong = song);
-      await _player.stop();
-      if (song.audioUrl.isNotEmpty) {
-        await _player.setUrl(song.audioUrl);
-        _player.play();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
-    }
-  }
-
-  // --- HÀM XỬ LÝ MENU 3 CHẤM NÂNG CẤP (FIREBASE) ---
+  // --- HÀM XỬ LÝ MENU 3 CHẤM ---
   void _handleShowOptions(BuildContext context, Song song) {
+    final favState = context.read<FavoritesBloc>().state;
+    final playerBloc = context.read<PlayerBloc>();
+    final playerState = playerBloc.state;
+
     showSongOptionsMenu(
       context: context,
       song: song,
-      likedSongIds: _likedSongIds,
-      favoriteSongs: _favoriteSongs,
-      player: _player,
-      currentSong: _currentSong,
+      likedSongIds: favState.likedSongIds.toList(),
+      favoriteSongs: favState.favoriteSongs.toList(),
+      player: playerBloc.player,
+      currentSong: playerState.currentSong,
       onStateChanged: () => setState(() {}),
-      onClearCurrentSong: () => setState(() => _currentSong = null),
-
-      // BẮN BÀI VIẾT LÊN ĐÁM MÂY FIRESTORE THAY VÌ LƯU Ở RAM
-      onShareToFeed: (sharedSong, caption) async {
-        // 1. Lấy thông tin người dùng đang đăng nhập
-        final user = FirebaseAuth.instance.currentUser;
-
-        try {
-          // 2. Gửi gói dữ liệu lên collection 'posts' của Firestore
-          await FirebaseFirestore.instance.collection('posts').add({
-            'userId': user?.uid,
-            'userName': user?.displayName ?? "Người dùng ẩn danh",
-            'userAvatar': user?.photoURL ?? "https://i.pravatar.cc/150?img=12",
-            'caption': caption,
-            'timestamp':
-                FieldValue.serverTimestamp(), // Firestore tự gắn giờ thực tế
-            'likes': 0,
-            'comments': 0,
-            // Lưu kèm thông tin bài hát để máy khác đọc được
-            'songId': sharedSong.id,
-            'songTitle': sharedSong.title,
-            'songArtist': sharedSong.artist,
-            'songCoverUrl': sharedSong.coverUrl,
-            'songAudioUrl': sharedSong.audioUrl,
-          });
-
-          // Đã xóa hàm setState _feedPosts.add vì không cần nữa
-        } catch (e) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("Lỗi đăng bài: $e")));
-        }
+      onClearCurrentSong: () => playerBloc.add(StopRequested()),
+      onShareToFeed: (sharedSong, caption) {
+        context.read<FeedBloc>().add(
+          CreatePost(caption: caption, song: sharedSong),
+        );
       },
     );
   }
@@ -121,115 +71,121 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.black,
       bottomNavigationBar: _buildBottomNavBar(),
       body: BlocBuilder<SongListBloc, SongListState>(
-        builder: (context, state) {
-          if (state is SongListLoading) {
+        builder: (context, songListState) {
+          if (songListState is SongListLoading) {
             return const Center(
               child: CircularProgressIndicator(color: Colors.tealAccent),
             );
           }
 
-          if (state is SongListLoaded) {
-            return Stack(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: _currentSong != null ? 80 : 0,
-                  ),
-                  child: IndexedStack(
-                    index: _selectedIndex,
-                    children: _buildPages(state),
-                  ),
-                ),
-                if (_currentSong != null)
-                  Positioned(
-                    left: 10,
-                    right: 10,
-                    bottom: 10,
-                    child: MiniPlayer(
-                      song: _currentSong!,
-                      player: _player,
-                      isFavorite: _likedSongIds.contains(
-                        _currentSong!.id.toString(),
-                      ),
-                      onToggleFavorite: () {
-                        setState(() {
-                          final songIdStr = _currentSong!.id.toString();
-                          if (_likedSongIds.contains(songIdStr)) {
-                            _likedSongIds.remove(songIdStr);
-                            _favoriteSongs.removeWhere(
-                              (s) => s.id == _currentSong!.id,
-                            );
-                          } else {
-                            _likedSongIds.add(songIdStr);
-                            _favoriteSongs.add(_currentSong!);
-                          }
-                        });
-                      },
-                      songs: state.songs,
-                      onSongChanged: (newSong) => _playMusic(newSong),
-                      onDismissed: () {
-                        _player.stop();
-                        setState(() => _currentSong = null);
-                      },
-                    ),
-                  ),
-              ],
-            );
+          if (songListState is SongListLoaded) {
+            // Cập nhật playlist cho PlayerBloc
+            context.read<PlayerBloc>().add(UpdatePlaylist(songListState.songs));
+
+            return _buildMainContent(songListState);
           }
-          if (state is SongListError)
+
+          if (songListState is SongListError) {
             return Center(
               child: Text(
-                "Lỗi: ${state.message}",
+                "Lỗi: ${songListState.message}",
                 style: const TextStyle(color: Colors.white),
               ),
             );
+          }
           return const SizedBox.shrink();
         },
       ),
     );
   }
 
-  // --- CÁC TRANG TRONG BOTTOM NAV BAR ---
-  List<Widget> _buildPages(SongListLoaded state) {
-    return [
-      _buildHomeContent(state),
+  Widget _buildMainContent(SongListLoaded songListState) {
+    return BlocBuilder<PlayerBloc, PlayerState>(
+      builder: (context, playerState) {
+        return BlocBuilder<FavoritesBloc, FavoritesState>(
+          builder: (context, favState) {
+            final currentSong = playerState.currentSong;
 
-      // FeedScreen giờ tự đọc bài viết từ Firestore, không cần truyền posts nữa
+            return Stack(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: currentSong != null ? 80 : 0,
+                  ),
+                  child: IndexedStack(
+                    index: _selectedIndex,
+                    children: _buildPages(songListState, playerState, favState),
+                  ),
+                ),
+                if (currentSong != null)
+                  Positioned(
+                    left: 10,
+                    right: 10,
+                    bottom: 10,
+                    child: MiniPlayer(
+                      song: currentSong,
+                      player: context.read<PlayerBloc>().player,
+                      isFavorite: favState.isFavorite(currentSong),
+                      onToggleFavorite: () {
+                        context.read<FavoritesBloc>().add(
+                          ToggleFavorite(currentSong),
+                        );
+                      },
+                      songs: songListState.songs,
+                      onSongChanged: (newSong) => _playMusic(newSong),
+                      onDismissed: () {
+                        context.read<PlayerBloc>().add(StopRequested());
+                      },
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // --- CÁC TRANG TRONG BOTTOM NAV BAR ---
+  List<Widget> _buildPages(
+    SongListLoaded songListState,
+    PlayerState playerState,
+    FavoritesState favState,
+  ) {
+    return [
+      _buildHomeContent(songListState, playerState),
+
       FeedScreen(
-        player: _player,
-        currentSong: _currentSong,
+        player: context.read<PlayerBloc>().player,
+        currentSong: playerState.currentSong,
         onPlaySong: _playMusic,
-        favoriteSongs: _favoriteSongs,
+        favoriteSongs: favState.favoriteSongs.toList(),
         onToggleFavorite: (song) {
-          setState(() {
-            if (_favoriteSongs.contains(song)) {
-              _favoriteSongs.remove(song);
-            } else {
-              _favoriteSongs.add(song);
-            }
-          });
+          context.read<FavoritesBloc>().add(ToggleFavorite(song));
         },
       ),
 
       SearchScreen(
-        songs: state.songs,
-        currentSong: _currentSong,
-        player: _player,
+        songs: songListState.songs,
+        currentSong: playerState.currentSong,
+        player: context.read<PlayerBloc>().player,
         onPlaySong: _playMusic,
         onOptionsTap: (song) => _handleShowOptions(context, song),
       ),
+
       LibraryScreen(
-        favoriteSongs: _favoriteSongs,
-        currentSong: _currentSong,
+        favoriteSongs: favState.favoriteSongs.toList(),
+        currentSong: playerState.currentSong,
         onPlaySong: _playMusic,
         onOptionsTap: (song) => _handleShowOptions(context, song),
       ),
+
       const ProfileScreen(),
     ];
   }
 
   // --- GIAO DIỆN TRANG CHỦ ---
-  Widget _buildHomeContent(SongListLoaded state) {
+  Widget _buildHomeContent(SongListLoaded state, PlayerState playerState) {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -247,24 +203,25 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildAppBar(),
               _buildSectionTitle("Nghệ sĩ nổi bật"),
               _buildArtistBanner(state.songs),
-              _buildSectionTitle("Album mới nhất"),
-              _buildAlbumBanner(state.songs),
+              const PromoBanner(),
               _buildSectionTitle("Gợi ý cho bạn"),
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
-                itemCount: state.songs.length,
+                itemCount: min(10, state.songs.length),
                 itemBuilder: (context, index) {
                   final song = state.songs[index];
                   return SongItem(
                     song: song,
-                    isSelected: _currentSong?.id == song.id,
+                    isSelected: playerState.currentSong?.id == song.id,
                     onTap: () => _playMusic(song),
                     onOptionsTap: () => _handleShowOptions(context, song),
                   );
                 },
               ),
+              _buildSectionTitle("Album mới nhất"),
+              _buildAlbumBanner(),
               const SizedBox(height: 20),
             ],
           ),
@@ -374,14 +331,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAlbumBanner(List<Song> songs) {
+  Widget _buildAlbumBanner() {
+    // Dùng AlbumRepository stream thay vì Firestore trực tiếp
     return SizedBox(
       height: 190,
-      child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('albums')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+      child: StreamBuilder(
+        stream: context.read<AlbumRepository>().getAlbumsStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(

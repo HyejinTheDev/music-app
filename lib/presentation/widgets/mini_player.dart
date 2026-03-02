@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../data/models/song_model.dart';
+import '../../logic/player/player_bloc.dart';
+import '../../logic/player/player_event.dart';
+import '../../logic/favorites/favorites_bloc.dart';
+import '../../logic/favorites/favorites_event.dart';
+import '../../logic/favorites/favorites_state.dart';
 import '../screens/song_detail_screen.dart';
 
+/// MiniPlayer thu gọn — dùng PlayerBloc thay vì callback
 class MiniPlayer extends StatelessWidget {
   final Song song;
   final AudioPlayer player;
@@ -23,22 +30,10 @@ class MiniPlayer extends StatelessWidget {
     this.onSongChanged,
   }) : super(key: key);
 
-  void _nextSong() {
-    if (songs.isEmpty) return;
-    final currentIndex = songs.indexWhere((s) => s.id == song.id);
-    final nextIndex = (currentIndex + 1) % songs.length;
-    onSongChanged?.call(songs[nextIndex]);
-  }
-
-  void _previousSong() {
-    if (songs.isEmpty) return;
-    final currentIndex = songs.indexWhere((s) => s.id == song.id);
-    final prevIndex = (currentIndex - 1 + songs.length) % songs.length;
-    onSongChanged?.call(songs[prevIndex]);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final playerBloc = context.read<PlayerBloc>();
+
     return Dismissible(
       key: const Key('mini_player'),
       direction: DismissDirection.down,
@@ -114,11 +109,14 @@ class MiniPlayer extends StatelessWidget {
                   ],
                 ),
               ),
+              // Nút previous — dùng PlayerBloc
               IconButton(
                 icon: const Icon(Icons.skip_previous, color: Colors.white),
-                onPressed: songs.isNotEmpty ? _previousSong : null,
+                onPressed: songs.isNotEmpty
+                    ? () => playerBloc.add(PreviousSongRequested())
+                    : null,
               ),
-              // StreamBuilder tự động nghe trạng thái nhạc để đổi icon Play/Pause
+              // Nút Play/Pause — stream trạng thái
               StreamBuilder<PlayerState>(
                 stream: player.playerStateStream,
                 builder: (context, snapshot) {
@@ -133,18 +131,22 @@ class MiniPlayer extends StatelessWidget {
                         color: Colors.black,
                       ),
                       onPressed: () {
-                        if (playing)
-                          player.pause();
-                        else
-                          player.play();
+                        if (playing) {
+                          playerBloc.add(PauseRequested());
+                        } else {
+                          playerBloc.add(ResumeRequested());
+                        }
                       },
                     ),
                   );
                 },
               ),
+              // Nút next — dùng PlayerBloc
               IconButton(
                 icon: const Icon(Icons.skip_next, color: Colors.white),
-                onPressed: songs.isNotEmpty ? _nextSong : null,
+                onPressed: songs.isNotEmpty
+                    ? () => playerBloc.add(NextSongRequested())
+                    : null,
               ),
             ],
           ),

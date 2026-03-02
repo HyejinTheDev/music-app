@@ -1,28 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:music_app/presentation/screens/home_screen.dart';
 import 'firebase_options.dart';
 
-// Import Repository
+// --- Repositories ---
 import 'data/repositories/song_repository.dart';
+import 'data/repositories/post_repository.dart';
+import 'data/repositories/album_repository.dart';
 
-// Import Logic
+// --- BLoCs ---
 import 'logic/song_bloc/song_bloc.dart';
 import 'logic/song_list/song_list_bloc.dart';
 import 'logic/song_list/song_list_event.dart';
+import 'logic/auth_bloc/auth_bloc.dart';
+import 'logic/player/player_bloc.dart';
+import 'logic/favorites/favorites_bloc.dart';
+import 'logic/feed/feed_bloc.dart';
+import 'logic/album/album_bloc.dart';
+import 'logic/banner/banner_bloc.dart';
+import 'logic/banner/banner_event.dart';
 
-// Import Screens
+// --- Screens ---
 import 'presentation/screens/login_screen.dart';
-import 'presentation/screens/register_screen.dart'; // Thêm import này nếu bạn có trang đăng ký
+import 'presentation/screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. Khởi tạo Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
 }
@@ -32,40 +38,55 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider(
-      create: (context) => SongRepository(),
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider(create: (_) => SongRepository()),
+        RepositoryProvider(create: (_) => PostRepository()),
+        RepositoryProvider(create: (_) => AlbumRepository()),
+      ],
       child: MultiBlocProvider(
         providers: [
+          // BLoCs giữ nguyên
           BlocProvider<SongListBloc>(
-            create: (context) => SongListBloc(
-              songRepository: context.read<SongRepository>(),
-            )..add(LoadSongs()),
+            create: (context) =>
+                SongListBloc(songRepository: context.read<SongRepository>())
+                  ..add(LoadSongs()),
           ),
           BlocProvider<SongBloc>(
-            create: (context) => SongBloc(
-              songRepository: context.read<SongRepository>(),
-            ),
+            create: (context) =>
+                SongBloc(songRepository: context.read<SongRepository>()),
+          ),
+
+          // BLoCs mới
+          BlocProvider<AuthBloc>(create: (_) => AuthBloc()),
+          BlocProvider<PlayerBloc>(create: (_) => PlayerBloc()),
+          BlocProvider<FavoritesBloc>(create: (_) => FavoritesBloc()),
+          BlocProvider<FeedBloc>(
+            create: (context) =>
+                FeedBloc(postRepository: context.read<PostRepository>()),
+          ),
+          BlocProvider<AlbumBloc>(
+            create: (context) =>
+                AlbumBloc(albumRepository: context.read<AlbumRepository>()),
+          ),
+          BlocProvider<BannerBloc>(
+            create: (_) => BannerBloc()..add(LoadBanners()),
           ),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Music App Pro',
           theme: ThemeData(
-            brightness: Brightness.dark, // Chuyển toàn bộ App sang chế độ tối
+            brightness: Brightness.dark,
             primarySwatch: Colors.teal,
             scaffoldBackgroundColor: Colors.black,
           ),
-
-          // --- PHẦN QUAN TRỌNG NHẤT ĐỂ SỬA LỖI ĐĂNG XUẤT ---
-          initialRoute: '/', // Điểm bắt đầu
+          initialRoute: '/',
           routes: {
-            '/login': (context) => const LoginScreen(), // Khai báo tên '/login'
-            // '/register': (context) => const RegisterScreen(), // Mở ra nếu bạn có trang này
+            '/login': (context) => const LoginScreen(),
             '/home': (context) => const HomeScreen(),
           },
-          // -----------------------------------------------
-
-          home: const LoginScreen(), // Màn hình mặc định khi mở App
+          home: const LoginScreen(),
         ),
       ),
     );
