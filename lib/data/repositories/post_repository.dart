@@ -22,6 +22,11 @@ class PostRepository {
     await _firestore.collection('posts').add(post.toMap());
   }
 
+  /// Tạo bài viết mới và trả về DocumentReference (cần ID để gửi notification)
+  Future<DocumentReference> createPostAndReturnRef(Post post) async {
+    return await _firestore.collection('posts').add(post.toMap());
+  }
+
   /// Cập nhật caption bài viết
   Future<void> updatePostCaption(String docId, String newCaption) async {
     await _firestore.collection('posts').doc(docId).update({

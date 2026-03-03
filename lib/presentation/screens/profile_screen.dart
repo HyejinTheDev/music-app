@@ -28,11 +28,15 @@ class ProfileScreen extends StatelessWidget {
             String displayName = loc.translate('new_artist');
             String email = loc.translate('guest_mode');
             String? photoUrl;
+            int followerCount = 0;
+            int followingCount = 0;
 
             if (profileState is ProfileLoaded) {
               displayName = profileState.displayName;
               email = profileState.email;
               photoUrl = profileState.photoUrl;
+              followerCount = profileState.followerCount;
+              followingCount = profileState.followingCount;
             }
 
             return SingleChildScrollView(
@@ -50,10 +54,11 @@ class ProfileScreen extends StatelessWidget {
                           child: CircleAvatar(
                             radius: 52,
                             backgroundColor: theme.scaffoldBackgroundColor,
-                            backgroundImage: photoUrl != null
+                            backgroundImage:
+                                photoUrl != null && photoUrl.isNotEmpty
                                 ? NetworkImage(photoUrl)
                                 : null,
-                            child: photoUrl == null
+                            child: photoUrl == null || photoUrl.isEmpty
                                 ? const Icon(
                                     Icons.person,
                                     size: 50,
@@ -78,8 +83,11 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             GestureDetector(
-                              onTap: () =>
-                                  showEditNameDialog(context, displayName),
+                              onTap: () => showEditProfileDialog(
+                                context,
+                                displayName,
+                                photoUrl,
+                              ),
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
@@ -102,6 +110,33 @@ class ProfileScreen extends StatelessWidget {
                             color: Colors.grey,
                             fontSize: 14,
                           ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 🔥 Follower / Following counts
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildCountColumn(
+                              count: followerCount,
+                              label: loc.translate('followers'),
+                              theme: theme,
+                            ),
+                            Container(
+                              height: 30,
+                              width: 1,
+                              color: Colors.grey.withOpacity(0.3),
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                            ),
+                            _buildCountColumn(
+                              count: followingCount,
+                              label: loc.translate('following'),
+                              theme: theme,
+                            ),
+                          ],
                         ),
 
                         // Loading indicator khi đang cập nhật
@@ -235,6 +270,28 @@ class ProfileScreen extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+
+  /// Widget hiển thị số đếm (follower/following)
+  Widget _buildCountColumn({
+    required int count,
+    required String label,
+    required ThemeData theme,
+  }) {
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: TextStyle(
+            color: theme.textTheme.titleLarge?.color,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+      ],
     );
   }
 }

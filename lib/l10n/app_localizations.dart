@@ -62,6 +62,21 @@ class AppLocalizations {
       'delete': 'Xóa',
       'edit': 'Sửa',
       'close': 'Đóng',
+
+      // Profile Edit
+      'followers': 'Người theo dõi',
+      'following': 'Đang theo dõi',
+      'edit_profile': 'Sửa hồ sơ',
+      'display_name': 'Tên hiển thị',
+      'enter_name_hint': 'Nhập tên mới...',
+      'photo_url': 'URL ảnh đại diện',
+      'photo_url_hint': 'Nhập link ảnh...',
+
+      // Artist Profile
+      'artist_profile': 'Trang nghệ sĩ',
+      'uploaded_songs': 'Bài hát đã đăng',
+      'song_count': 'bài hát',
+      'no_songs': 'Chưa có bài hát nào',
     },
     'en': {
       // Bottom Nav
@@ -108,6 +123,21 @@ class AppLocalizations {
       'delete': 'Delete',
       'edit': 'Edit',
       'close': 'Close',
+
+      // Profile Edit
+      'followers': 'Followers',
+      'following': 'Following',
+      'edit_profile': 'Edit Profile',
+      'display_name': 'Display Name',
+      'enter_name_hint': 'Enter new name...',
+      'photo_url': 'Photo URL',
+      'photo_url_hint': 'Enter image link...',
+
+      // Artist Profile
+      'artist_profile': 'Artist Profile',
+      'uploaded_songs': 'Uploaded Songs',
+      'song_count': 'songs',
+      'no_songs': 'No songs yet',
     },
   };
 

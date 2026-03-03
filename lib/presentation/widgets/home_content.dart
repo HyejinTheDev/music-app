@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/song_model.dart';
+import '../../data/models/artist_profile.dart';
 import '../../logic/song_list/song_list_bloc.dart';
 import '../../logic/song_list/song_list_event.dart';
 import '../../logic/player/player_bloc.dart';
@@ -13,6 +14,10 @@ import 'song_options_menu.dart';
 import 'promo_banner.dart';
 import 'artist_banner.dart';
 import 'album_banner.dart';
+import '../screens/artist_profile_screen.dart';
+import '../screens/notification_screen.dart';
+import '../../logic/notification/notification_bloc.dart';
+import '../../logic/notification/notification_state.dart';
 
 /// Nội dung trang chủ (tab Home)
 /// Tách từ home_screen.dart
@@ -62,8 +67,16 @@ class HomeContent extends StatelessWidget {
               _buildAppBar(context, loc),
               _buildSectionTitle(context, loc.translate('featured_artists')),
               ArtistBanner(
-                songs: songs,
-                onTap: (song) => _playMusic(context, song),
+                artists: ArtistProfile.fromSongs(songs),
+                onTap: (artist) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ArtistProfileScreen(artist: artist, allSongs: songs),
+                    ),
+                  );
+                },
               ),
               const PromoBanner(),
               _buildSectionTitle(context, loc.translate('suggestions')),
@@ -107,9 +120,49 @@ class HomeContent extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.refresh, color: theme.iconTheme.color),
-            onPressed: () => context.read<SongListBloc>().add(LoadSongs()),
+          Row(
+            children: [
+              // --- NÚT CHUÔNG THÔNG BÁO ---
+              BlocBuilder<NotificationBloc, NotificationState>(
+                builder: (context, notifState) {
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.notifications_none,
+                          color: theme.iconTheme.color,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      if (notifState.hasUnread)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              IconButton(
+                icon: Icon(Icons.refresh, color: theme.iconTheme.color),
+                onPressed: () => context.read<SongListBloc>().add(LoadSongs()),
+              ),
+            ],
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/comment_model.dart';
 import '../../data/repositories/post_repository.dart';
+import '../../data/repositories/notification_repository.dart';
 import 'feed_event.dart';
 import 'feed_state.dart';
 
@@ -10,8 +11,10 @@ import 'feed_state.dart';
 /// Tách từ logic Firestore trực tiếp trong feed_screen.dart và home_screen.dart
 class FeedBloc extends Bloc<FeedEvent, FeedState> {
   final PostRepository postRepository;
+  final NotificationRepository notificationRepository;
 
-  FeedBloc({required this.postRepository}) : super(FeedLoading()) {
+  FeedBloc({required this.postRepository, required this.notificationRepository})
+    : super(FeedLoading()) {
     on<LoadFeed>(_onLoadFeed);
     on<CreatePost>(_onCreatePost);
     on<EditPost>(_onEditPost);
@@ -25,19 +28,20 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     emit(FeedReady());
   }
 
-  /// Tạo bài viết mới
+  /// Tạo bài viết mới + gửi thông báo cho followers
   Future<void> _onCreatePost(CreatePost event, Emitter<FeedState> emit) async {
     emit(FeedActionInProgress());
     try {
       final user = FirebaseAuth.instance.currentUser;
+      final caption = event.caption.isNotEmpty
+          ? event.caption
+          : "Đang nghe bài này 🎵";
 
       final post = Post(
         userId: user?.uid,
         userName: user?.displayName ?? "Người dùng ẩn danh",
         userAvatar: user?.photoURL ?? "https://i.pravatar.cc/150?img=12",
-        caption: event.caption.isNotEmpty
-            ? event.caption
-            : "Đang nghe bài này 🎵",
+        caption: caption,
         songTitle: event.song.title,
         songArtist: event.song.artist,
         songCoverUrl: event.song.coverUrl,
@@ -46,7 +50,20 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
         likedBy: [],
       );
 
-      await postRepository.createPost(post);
+      // Tạo post trên Firestore
+      final docRef = await postRepository.createPostAndReturnRef(post);
+
+      // Gửi thông báo cho tất cả followers
+      if (user != null) {
+        await notificationRepository.notifyFollowersOfNewPost(
+          posterUserId: user.uid,
+          posterUserName: user.displayName ?? 'Người dùng ẩn danh',
+          postId: docRef.id,
+          songTitle: event.song.title,
+          caption: caption,
+        );
+      }
+
       emit(FeedActionSuccess("Đã đăng bài thành công!"));
       emit(FeedReady());
     } catch (e) {

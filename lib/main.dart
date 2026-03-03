@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'data/repositories/song_repository.dart';
 import 'data/repositories/post_repository.dart';
 import 'data/repositories/album_repository.dart';
+import 'data/repositories/notification_repository.dart';
 
 // --- BLoCs ---
 import 'logic/song_bloc/song_bloc.dart';
@@ -25,6 +26,10 @@ import 'logic/profile/profile_event.dart';
 import 'logic/history/history_bloc.dart';
 import 'logic/settings/settings_bloc.dart';
 import 'logic/settings/settings_state.dart';
+import 'logic/notification/notification_bloc.dart';
+import 'logic/notification/notification_event.dart';
+import 'logic/follow/follow_bloc.dart';
+import 'logic/follow/follow_event.dart';
 
 // --- Localization ---
 import 'l10n/app_localizations.dart';
@@ -32,12 +37,20 @@ import 'l10n/app_localizations.dart';
 // --- Screens ---
 import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/home_screen.dart';
+import 'data/services/local_notification_service.dart';
+import 'data/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. Khởi tạo Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // 2. Khởi tạo Local Notification Service
+  await LocalNotificationService.initialize();
+
+  // 3. Khởi tạo Firebase Cloud Messaging
+  await FcmService.initialize();
 
   runApp(const MyApp());
 }
@@ -52,6 +65,7 @@ class MyApp extends StatelessWidget {
         RepositoryProvider(create: (_) => SongRepository()),
         RepositoryProvider(create: (_) => PostRepository()),
         RepositoryProvider(create: (_) => AlbumRepository()),
+        RepositoryProvider(create: (_) => NotificationRepository()),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -72,8 +86,10 @@ class MyApp extends StatelessWidget {
           BlocProvider<FavoritesBloc>(create: (_) => FavoritesBloc()),
           BlocProvider<HistoryBloc>(create: (_) => HistoryBloc()),
           BlocProvider<FeedBloc>(
-            create: (context) =>
-                FeedBloc(postRepository: context.read<PostRepository>()),
+            create: (context) => FeedBloc(
+              postRepository: context.read<PostRepository>(),
+              notificationRepository: context.read<NotificationRepository>(),
+            ),
           ),
           BlocProvider<AlbumBloc>(
             create: (context) =>
@@ -90,6 +106,22 @@ class MyApp extends StatelessWidget {
 
           // Settings BLoC — quản lý theme + locale
           BlocProvider<SettingsBloc>(create: (_) => SettingsBloc()),
+
+          // Notification BLoC — lắng nghe thông báo cá nhân từ Firestore
+          BlocProvider<NotificationBloc>(
+            create: (context) =>
+                NotificationBloc(
+                    notificationRepository: context
+                        .read<NotificationRepository>(),
+                  )
+                  ..add(LoadNotifications())
+                  ..add(StartListeningNotifications()),
+          ),
+
+          // Follow BLoC
+          BlocProvider<FollowBloc>(
+            create: (_) => FollowBloc()..add(LoadFollowing()),
+          ),
         ],
 
         // Wrap MaterialApp bằng BlocBuilder để reactive theme/locale

@@ -6,6 +6,7 @@ import '../../logic/song_bloc/song_bloc.dart';
 import '../../logic/song_bloc/song_event.dart';
 import '../../logic/song_list/song_list_bloc.dart';
 import '../../logic/song_list/song_list_event.dart' as sle;
+import '../../data/services/local_notification_service.dart';
 
 class AddEditSongScreen extends StatefulWidget {
   final Song? song;
@@ -70,6 +71,14 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
       context.read<SongBloc>().add(UpdateSongEvent(song));
     } else {
       context.read<SongBloc>().add(AddSongEvent(song));
+
+      // show a local notification immediately when a new song is added
+      // this lets us test the notification flow on the same device
+      LocalNotificationService.showNotification(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: 'Bài hát mới',
+        body: 'Bạn đã thêm: ${song.title}',
+      );
     }
 
     context.read<SongListBloc>().add(sle.LoadSongs());

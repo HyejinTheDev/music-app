@@ -12,11 +12,15 @@ class ProfileLoaded extends ProfileState {
   final String displayName;
   final String email;
   final String? photoUrl;
+  final int followerCount;
+  final int followingCount;
 
   ProfileLoaded({
     required this.displayName,
     required this.email,
     this.photoUrl,
+    this.followerCount = 0,
+    this.followingCount = 0,
   });
 }
 

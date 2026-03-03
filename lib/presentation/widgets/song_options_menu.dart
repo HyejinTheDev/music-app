@@ -18,6 +18,9 @@ import '../../logic/feed/feed_event.dart';
 import '../screens/add_edit_song_screen.dart';
 import 'share_bottom_sheet.dart';
 import 'song_info_dialog.dart';
+import '../../logic/follow/follow_bloc.dart';
+import '../../logic/follow/follow_event.dart';
+import '../../logic/follow/follow_state.dart';
 
 /// Hàm chính gọi Menu tùy chọn bài hát
 void showSongOptionsMenu({
@@ -43,6 +46,7 @@ void showSongOptionsMenu({
   final playerState = playerBloc.state;
   final player = playerBloc.player;
   final currentSong = playerState.currentSong;
+  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
   showModalBottomSheet(
     context: context,
@@ -167,6 +171,54 @@ void showSongOptionsMenu({
                       showAuthorInfoDialog(context, song);
                     },
                   ),
+
+                  // --- THEO DÕI NGHỆ SĨ (chỉ hiện khi không phải mình) ---
+                  if (song.userId != null && song.userId != currentUserId)
+                    BlocBuilder<FollowBloc, FollowState>(
+                      builder: (context, followState) {
+                        final isFollowing = followState.isFollowing(
+                          song.userId!,
+                        );
+                        return ListTile(
+                          leading: Icon(
+                            isFollowing
+                                ? Icons.person_remove
+                                : Icons.person_add,
+                            color: isFollowing
+                                ? Colors.orangeAccent
+                                : Colors.tealAccent,
+                          ),
+                          title: Text(
+                            isFollowing
+                                ? 'Bỏ theo dõi ${song.uploaderName ?? song.artist}'
+                                : 'Theo dõi ${song.uploaderName ?? song.artist}',
+                            style: TextStyle(
+                              color: isFollowing
+                                  ? Colors.orangeAccent
+                                  : Colors.tealAccent,
+                            ),
+                          ),
+                          onTap: () {
+                            context.read<FollowBloc>().add(
+                              ToggleFollow(
+                                artistUserId: song.userId!,
+                                artistName: song.uploaderName ?? song.artist,
+                              ),
+                            );
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isFollowing
+                                      ? 'Đã bỏ theo dõi ${song.uploaderName ?? song.artist}'
+                                      : 'Đã theo dõi ${song.uploaderName ?? song.artist}',
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
 
                   // --- CHỈ HIỆN SỬA/XÓA KHI LÀ CHỦ BÀI HÁT ---
                   if (song.userId != null &&
