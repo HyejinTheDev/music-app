@@ -18,10 +18,12 @@ void showCreatePostSheet(
   final feedBloc = context.read<FeedBloc>();
   final postRepository = context.read<PostRepository>();
 
+  final theme = Theme.of(context);
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1E1E1E),
+    backgroundColor: theme.cardColor,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -57,10 +59,10 @@ void showCreatePostSheet(
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "Tạo bài viết mới",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: theme.textTheme.titleLarge?.color,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -95,7 +97,7 @@ void showCreatePostSheet(
                   // Ô nhập caption
                   TextField(
                     controller: captionController,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: "Bạn đang nghĩ gì?...",
@@ -257,7 +259,9 @@ Widget _buildSongListForSharing({
             title: Text(
               song.title,
               style: TextStyle(
-                color: isSelected ? Colors.tealAccent : Colors.white,
+                color: isSelected
+                    ? Colors.tealAccent
+                    : Theme.of(context).textTheme.bodyLarge?.color,
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 1,

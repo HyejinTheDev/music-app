@@ -31,7 +31,9 @@ class SongItem extends StatelessWidget {
       title: Text(
         song.title,
         style: TextStyle(
-          color: isSelected ? Colors.tealAccent : Colors.white,
+          color: isSelected
+              ? Colors.tealAccent
+              : Theme.of(context).textTheme.bodyLarge?.color,
           fontWeight: FontWeight.w600,
         ),
       ),

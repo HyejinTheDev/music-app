@@ -1,3 +1,5 @@
+import '../../data/models/song_model.dart';
+
 /// Các trạng thái quản lý album
 abstract class AlbumState {}
 
@@ -15,6 +17,13 @@ class AlbumCreateSuccess extends AlbumState {
   final String message;
 
   AlbumCreateSuccess(this.message);
+}
+
+/// Đã tải danh sách bài hát của user (cho màn tạo album)
+class AlbumUserSongsLoaded extends AlbumState {
+  final List<Song> userSongs;
+
+  AlbumUserSongsLoaded(this.userSongs);
 }
 
 /// Lỗi

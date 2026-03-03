@@ -2,27 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../logic/profile/profile_bloc.dart';
-import '../../logic/profile/profile_event.dart';
 import '../../logic/profile/profile_state.dart';
-import '../../logic/song_list/song_list_bloc.dart';
-import '../../logic/song_list/song_list_event.dart';
+import '../../l10n/app_localizations.dart';
 import 'add_edit_song_screen.dart';
 import 'add_album_screen.dart';
 import 'history_screen.dart';
 import 'favorites_detail_screen.dart';
+import 'settings_screen.dart';
+import '../widgets/edit_name_dialog.dart';
+import '../widgets/profile_menu_tile.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: BlocBuilder<ProfileBloc, ProfileState>(
           builder: (context, profileState) {
-            String displayName = 'Nghệ sĩ mới';
-            String email = 'Guest Mode';
+            String displayName = loc.translate('new_artist');
+            String email = loc.translate('guest_mode');
             String? photoUrl;
 
             if (profileState is ProfileLoaded) {
@@ -45,7 +49,7 @@ class ProfileScreen extends StatelessWidget {
                           backgroundColor: Colors.tealAccent,
                           child: CircleAvatar(
                             radius: 52,
-                            backgroundColor: Colors.black,
+                            backgroundColor: theme.scaffoldBackgroundColor,
                             backgroundImage: photoUrl != null
                                 ? NetworkImage(photoUrl)
                                 : null,
@@ -66,8 +70,8 @@ class ProfileScreen extends StatelessWidget {
                           children: [
                             Text(
                               displayName,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: theme.textTheme.titleLarge?.color,
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -75,7 +79,7 @@ class ProfileScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             GestureDetector(
                               onTap: () =>
-                                  _showEditNameDialog(context, displayName),
+                                  showEditNameDialog(context, displayName),
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
@@ -120,13 +124,16 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 30),
 
                   // 2. Khu vực QUẢN LÝ NỘI DUNG
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Quản lý nội dung",
-                        style: TextStyle(
+                        loc.translate('content_management'),
+                        style: const TextStyle(
                           color: Colors.grey,
                           fontWeight: FontWeight.bold,
                         ),
@@ -135,207 +142,98 @@ class ProfileScreen extends StatelessWidget {
                   ),
 
                   // NÚT 1: THÊM BÀI HÁT MỚI
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    child: Card(
-                      color: Colors.tealAccent.withOpacity(0.1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.cloud_upload,
-                          color: Colors.tealAccent,
+                  ContentManagementCard(
+                    leadingIcon: Icons.cloud_upload,
+                    title: loc.translate('add_song'),
+                    subtitle: loc.translate('add_song_sub'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddEditSongScreen(),
                         ),
-                        title: const Text(
-                          "Thêm bài hát mới",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: const Text(
-                          "Tải nhạc của bạn lên hệ thống",
-                          style: TextStyle(color: Colors.white60, fontSize: 12),
-                        ),
-                        trailing: const Icon(
-                          Icons.add_circle,
-                          color: Colors.tealAccent,
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AddEditSongScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 10),
 
                   // NÚT 2: THÊM ALBUM MỚI
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    child: Card(
-                      color: Colors.tealAccent.withOpacity(0.1),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.album,
-                          color: Colors.tealAccent,
+                  ContentManagementCard(
+                    leadingIcon: Icons.album,
+                    title: loc.translate('add_album'),
+                    subtitle: loc.translate('add_album_sub'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddAlbumScreen(),
                         ),
-                        title: const Text(
-                          "Thêm album mới",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: const Text(
-                          "Tạo danh sách phát của riêng bạn",
-                          style: TextStyle(color: Colors.white60, fontSize: 12),
-                        ),
-                        trailing: const Icon(
-                          Icons.add_circle,
-                          color: Colors.tealAccent,
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AddAlbumScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 10),
 
                   // 3. Các cài đặt khác
-                  _buildTile(Icons.history, "Lịch sử đã nghe", () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HistoryScreen()),
-                    );
-                  }),
-                  _buildTile(Icons.favorite, "Danh sách yêu thích", () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FavoritesDetailScreen(),
-                      ),
-                    );
-                  }),
-                  _buildTile(Icons.settings, "Cài đặt", () {}),
+                  ProfileMenuTile(
+                    icon: Icons.history,
+                    title: loc.translate('history'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ProfileMenuTile(
+                    icon: Icons.favorite,
+                    title: loc.translate('favorites'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FavoritesDetailScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ProfileMenuTile(
+                    icon: Icons.settings,
+                    title: loc.translate('settings'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
 
                   const Divider(color: Colors.white10, height: 40),
 
                   // 4. Đăng xuất
-                  _buildTile(Icons.logout, "Đăng xuất", () async {
-                    await FirebaseAuth.instance.signOut();
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/login',
-                      (route) => false,
-                    );
-                  }, isExit: true),
+                  ProfileMenuTile(
+                    icon: Icons.logout,
+                    title: loc.translate('logout'),
+                    isExit: true,
+                    onTap: () async {
+                      await FirebaseAuth.instance.signOut();
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/login',
+                        (route) => false,
+                      );
+                    },
+                  ),
                 ],
               ),
             );
           },
         ),
-      ),
-    );
-  }
-
-  /// Dialog sửa tên hiển thị
-  void _showEditNameDialog(BuildContext context, String currentName) {
-    final controller = TextEditingController(text: currentName);
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          "Sửa tên hiển thị",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: "Nhập tên mới...",
-            hintStyle: const TextStyle(color: Colors.grey),
-            filled: true,
-            fillColor: Colors.black26,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.tealAccent),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.tealAccent, width: 2),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.tealAccent,
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty && newName != currentName) {
-                context.read<ProfileBloc>().add(UpdateDisplayName(newName));
-                // Reload danh sách bài hát để cập nhật tên
-                context.read<SongListBloc>().add(LoadSongs());
-              }
-              Navigator.pop(dialogContext);
-            },
-            child: const Text(
-              "Lưu",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTile(
-    IconData icon,
-    String title,
-    VoidCallback onTap, {
-    bool isExit = false,
-  }) {
-    return ListTile(
-      onTap: onTap,
-      leading: Icon(icon, color: isExit ? Colors.redAccent : Colors.white70),
-      title: Text(
-        title,
-        style: TextStyle(color: isExit ? Colors.redAccent : Colors.white),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: Colors.white24,
-        size: 18,
       ),
     );
   }

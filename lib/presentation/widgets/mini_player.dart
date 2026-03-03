@@ -58,12 +58,12 @@ class MiniPlayer extends StatelessWidget {
           height: 70,
           margin: const EdgeInsets.only(bottom: 10, left: 10, right: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF252525).withOpacity(0.98),
+            color: Theme.of(context).cardColor.withOpacity(0.98),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: Theme.of(context).dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.6),
+                color: Colors.black.withOpacity(0.3),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
               ),
@@ -94,8 +94,8 @@ class MiniPlayer extends StatelessWidget {
                       song.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -111,7 +111,10 @@ class MiniPlayer extends StatelessWidget {
               ),
               // Nút previous — dùng PlayerBloc
               IconButton(
-                icon: const Icon(Icons.skip_previous, color: Colors.white),
+                icon: Icon(
+                  Icons.skip_previous,
+                  color: Theme.of(context).iconTheme.color,
+                ),
                 onPressed: songs.isNotEmpty
                     ? () => playerBloc.add(PreviousSongRequested())
                     : null,
@@ -143,7 +146,10 @@ class MiniPlayer extends StatelessWidget {
               ),
               // Nút next — dùng PlayerBloc
               IconButton(
-                icon: const Icon(Icons.skip_next, color: Colors.white),
+                icon: Icon(
+                  Icons.skip_next,
+                  color: Theme.of(context).iconTheme.color,
+                ),
                 onPressed: songs.isNotEmpty
                     ? () => playerBloc.add(NextSongRequested())
                     : null,

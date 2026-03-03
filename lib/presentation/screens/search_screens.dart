@@ -51,12 +51,12 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
                     child: Text(
                       "Tìm kiếm",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).textTheme.titleLarge?.color,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),

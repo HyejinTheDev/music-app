@@ -12,10 +12,12 @@ void showCommentSheet(BuildContext context, String docId) {
   final postRepository = context.read<PostRepository>();
   final feedBloc = context.read<FeedBloc>();
 
+  final theme = Theme.of(context);
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1E1E1E),
+    backgroundColor: theme.cardColor,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -51,8 +53,8 @@ void showCommentSheet(BuildContext context, String docId) {
                   final commentCount = snapshot.data?.docs.length ?? 0;
                   return Text(
                     "Bình luận ($commentCount)",
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.textTheme.titleLarge?.color,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -60,7 +62,7 @@ void showCommentSheet(BuildContext context, String docId) {
                 },
               ),
               const SizedBox(height: 12),
-              const Divider(color: Colors.white10),
+              Divider(color: theme.dividerColor),
 
               // Danh sách bình luận
               Expanded(
@@ -126,8 +128,11 @@ void showCommentSheet(BuildContext context, String docId) {
                                       children: [
                                         Text(
                                           userName,
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                          style: TextStyle(
+                                            color: theme
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.color,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 13,
                                           ),
@@ -145,8 +150,9 @@ void showCommentSheet(BuildContext context, String docId) {
                                     const SizedBox(height: 4),
                                     Text(
                                       text,
-                                      style: const TextStyle(
-                                        color: Color(0xFFE0E0E0),
+                                      style: TextStyle(
+                                        color: theme.textTheme.bodyLarge?.color
+                                            ?.withOpacity(0.85),
                                         fontSize: 14,
                                         height: 1.3,
                                       ),
@@ -164,7 +170,7 @@ void showCommentSheet(BuildContext context, String docId) {
               ),
 
               // Ô nhập bình luận
-              const Divider(color: Colors.white10),
+              Divider(color: theme.dividerColor),
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
@@ -172,7 +178,9 @@ void showCommentSheet(BuildContext context, String docId) {
                     Expanded(
                       child: TextField(
                         controller: commentController,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                          color: theme.textTheme.bodyLarge?.color,
+                        ),
                         decoration: InputDecoration(
                           hintText: "Viết bình luận...",
                           hintStyle: TextStyle(color: Colors.grey[500]),

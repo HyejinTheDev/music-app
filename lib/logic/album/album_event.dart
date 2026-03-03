@@ -25,3 +25,6 @@ class DeleteAlbum extends AlbumEvent {
 
   DeleteAlbum(this.docId);
 }
+
+/// Tải danh sách bài hát của user từ local DB (cho màn tạo album)
+class LoadUserSongs extends AlbumEvent {}

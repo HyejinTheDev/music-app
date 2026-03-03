@@ -54,18 +54,18 @@ class FeedScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     "Cộng đồng",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.add_box_outlined,
-                      color: Colors.white,
+                      color: Theme.of(context).iconTheme.color,
                       size: 28,
                     ),
                     onPressed: () => showCreatePostSheet(

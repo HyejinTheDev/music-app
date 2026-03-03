@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/album_model.dart';
 import '../../data/repositories/album_repository.dart';
+import '../../data/dataproviders/db_helper.dart';
 import 'album_event.dart';
 import 'album_state.dart';
 
@@ -14,11 +15,30 @@ class AlbumBloc extends Bloc<AlbumEvent, AlbumState> {
     on<LoadAlbums>(_onLoadAlbums);
     on<CreateAlbum>(_onCreateAlbum);
     on<DeleteAlbum>(_onDeleteAlbum);
+    on<LoadUserSongs>(_onLoadUserSongs);
   }
 
   /// Tải albums — chuyển sang trạng thái sẵn sàng (list qua StreamBuilder)
   void _onLoadAlbums(LoadAlbums event, Emitter<AlbumState> emit) {
     emit(AlbumReady());
+  }
+
+  /// Tải danh sách bài hát của user hiện tại từ local DB
+  Future<void> _onLoadUserSongs(
+    LoadUserSongs event,
+    Emitter<AlbumState> emit,
+  ) async {
+    emit(AlbumLoading());
+    try {
+      final allSongs = await DatabaseHelper().getSongs();
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final userSongs = allSongs
+          .where((song) => song.userId == currentUid)
+          .toList();
+      emit(AlbumUserSongsLoaded(userSongs));
+    } catch (e) {
+      emit(AlbumError("Lỗi tải danh sách bài hát: $e"));
+    }
   }
 
   /// Tạo album mới

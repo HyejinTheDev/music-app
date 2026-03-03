@@ -26,8 +26,11 @@ class AlbumDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: BlocBuilder<SongListBloc, SongListState>(
         builder: (context, songListState) {
           // Lọc bài hát theo songIds từ SongListBloc
@@ -46,13 +49,13 @@ class AlbumDetailScreen extends StatelessWidget {
                   SliverAppBar(
                     expandedHeight: 280,
                     pinned: true,
-                    backgroundColor: Colors.black,
-                    iconTheme: const IconThemeData(color: Colors.white),
+                    backgroundColor: theme.scaffoldBackgroundColor,
+                    iconTheme: IconThemeData(color: theme.iconTheme.color),
                     flexibleSpace: FlexibleSpaceBar(
                       title: Text(
                         albumTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: theme.textTheme.titleLarge?.color,
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
@@ -72,12 +75,15 @@ class AlbumDetailScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const DecoratedBox(
+                          DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, Colors.black87],
+                                colors: [
+                                  Colors.transparent,
+                                  isDark ? Colors.black87 : Colors.white70,
+                                ],
                               ),
                             ),
                           ),

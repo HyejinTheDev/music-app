@@ -1,11 +1,10 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../l10n/app_localizations.dart';
 
 // --- LOGIC IMPORTS ---
 import '../../logic/song_list/song_list_bloc.dart';
 import '../../logic/song_list/song_list_state.dart';
-import '../../logic/song_list/song_list_event.dart';
 import '../../logic/player/player_bloc.dart';
 import '../../logic/player/player_state.dart';
 import '../../logic/player/player_event.dart';
@@ -16,18 +15,14 @@ import '../../logic/history/history_bloc.dart';
 import '../../logic/history/history_event.dart';
 
 import '../../data/models/song_model.dart';
-import '../../data/repositories/album_repository.dart';
 
 // --- SCREENS & WIDGETS IMPORTS ---
 import 'search_screens.dart';
 import 'profile_screen.dart';
 import 'feed_screen.dart';
 import 'library_screen.dart';
-import 'album_detail_screen.dart';
-import '../widgets/song_options_menu.dart';
-import '../widgets/song_item.dart';
 import '../widgets/mini_player.dart';
-import '../widgets/promo_banner.dart';
+import '../widgets/home_content.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -44,19 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<PlayerBloc>().add(PlaySongRequested(song));
   }
 
-  // --- HÀM XỬ LÝ MENU 3 CHẤM ---
-  void _handleShowOptions(BuildContext context, Song song) {
-    final favState = context.read<FavoritesBloc>().state;
-
-    showSongOptionsMenu(
-      context: context,
-      song: song,
-      likedSongIds: favState.likedSongIds.toList(),
-      favoriteSongs: favState.favoriteSongs.toList(),
-      onStateChanged: () => setState(() {}),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocListener<PlayerBloc, PlayerState>(
@@ -68,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         bottomNavigationBar: _buildBottomNavBar(),
         body: BlocBuilder<SongListBloc, SongListState>(
           builder: (context, songListState) {
@@ -156,7 +138,10 @@ class _HomeScreenState extends State<HomeScreen> {
     FavoritesState favState,
   ) {
     return [
-      _buildHomeContent(songListState, playerState),
+      HomeContent(
+        songs: songListState.songs,
+        currentSong: playerState.currentSong,
+      ),
 
       FeedScreen(
         player: context.read<PlayerBloc>().player,
@@ -176,259 +161,44 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
-  // --- GIAO DIỆN TRANG CHỦ ---
-  Widget _buildHomeContent(SongListLoaded state, PlayerState playerState) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2C3E50), Colors.black],
-          stops: [0.0, 0.3],
-        ),
-      ),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildAppBar(),
-              _buildSectionTitle("Nghệ sĩ nổi bật"),
-              _buildArtistBanner(state.songs),
-              const PromoBanner(),
-              _buildSectionTitle("Gợi ý cho bạn"),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: min(10, state.songs.length),
-                itemBuilder: (context, index) {
-                  final song = state.songs[index];
-                  return SongItem(
-                    song: song,
-                    isSelected: playerState.currentSong?.id == song.id,
-                    onTap: () => _playMusic(song),
-                    onOptionsTap: () => _handleShowOptions(context, song),
-                  );
-                },
-              ),
-              _buildSectionTitle("Album mới nhất"),
-              _buildAlbumBanner(),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            "Music App Pro",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => context.read<SongListBloc>().add(LoadSongs()),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomNavBar() {
+    final loc = AppLocalizations.of(context);
     return BottomNavigationBar(
       currentIndex: _selectedIndex,
       onTap: (index) => setState(() => _selectedIndex = index),
       type: BottomNavigationBarType.fixed,
-      backgroundColor: const Color(0xFF121212),
-      selectedItemColor: Colors.tealAccent,
-      unselectedItemColor: Colors.grey,
+      backgroundColor: Theme.of(
+        context,
+      ).bottomNavigationBarTheme.backgroundColor,
+      selectedItemColor: Theme.of(
+        context,
+      ).bottomNavigationBarTheme.selectedItemColor,
+      unselectedItemColor: Theme.of(
+        context,
+      ).bottomNavigationBarTheme.unselectedItemColor,
       showUnselectedLabels: true,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+      items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.library_music),
-          label: 'Library',
+          icon: const Icon(Icons.home),
+          label: loc.translate('home'),
         ),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.feed),
+          label: loc.translate('feed'),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.search),
+          label: loc.translate('search'),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.library_music),
+          label: loc.translate('library'),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.person),
+          label: loc.translate('profile'),
+        ),
       ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildArtistBanner(List<Song> songs) {
-    return SizedBox(
-      height: 110,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: songs.length,
-        itemBuilder: (context, index) => GestureDetector(
-          onTap: () => _playMusic(songs[index]),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            width: 80,
-            child: Column(
-              children: [
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      image: NetworkImage(songs[index].coverUrl),
-                      fit: BoxFit.cover,
-                    ),
-                    border: Border.all(color: Colors.white24, width: 2),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  songs[index].artist,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAlbumBanner() {
-    // Dùng AlbumRepository stream thay vì Firestore trực tiếp
-    return SizedBox(
-      height: 190,
-      child: StreamBuilder(
-        stream: context.read<AlbumRepository>().getAlbumsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.tealAccent),
-            );
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text(
-                "Chưa có album nào",
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-            );
-          }
-
-          final albums = snapshot.data!.docs;
-
-          return ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: albums.length,
-            itemBuilder: (context, index) {
-              final albumData = albums[index].data() as Map<String, dynamic>;
-              final title = albumData['title'] ?? 'Không tên';
-              final artist = albumData['artist'] ?? 'Nghệ sĩ';
-              final coverUrl = albumData['coverUrl'] ?? '';
-
-              return GestureDetector(
-                onTap: () {
-                  final songIds = List<String>.from(albumData['songIds'] ?? []);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AlbumDetailScreen(
-                        albumTitle: title,
-                        albumArtist: artist,
-                        albumCoverUrl: coverUrl,
-                        songIds: songIds,
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  width: 140,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          coverUrl,
-                          width: 140,
-                          height: 140,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                                width: 140,
-                                height: 140,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[800],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.album,
-                                  color: Colors.white54,
-                                  size: 50,
-                                ),
-                              ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
     );
   }
 }

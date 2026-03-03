@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 
 // --- Repositories ---
@@ -22,6 +23,11 @@ import 'logic/banner/banner_event.dart';
 import 'logic/profile/profile_bloc.dart';
 import 'logic/profile/profile_event.dart';
 import 'logic/history/history_bloc.dart';
+import 'logic/settings/settings_bloc.dart';
+import 'logic/settings/settings_state.dart';
+
+// --- Localization ---
+import 'l10n/app_localizations.dart';
 
 // --- Screens ---
 import 'presentation/screens/login_screen.dart';
@@ -81,22 +87,92 @@ class MyApp extends StatelessWidget {
                 ProfileBloc(songRepository: context.read<SongRepository>())
                   ..add(LoadProfile()),
           ),
+
+          // Settings BLoC — quản lý theme + locale
+          BlocProvider<SettingsBloc>(create: (_) => SettingsBloc()),
         ],
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Music App Pro',
-          theme: ThemeData(
-            brightness: Brightness.dark,
-            primarySwatch: Colors.teal,
-            scaffoldBackgroundColor: Colors.black,
-          ),
-          initialRoute: '/',
-          routes: {
-            '/login': (context) => const LoginScreen(),
-            '/home': (context) => const HomeScreen(),
+
+        // Wrap MaterialApp bằng BlocBuilder để reactive theme/locale
+        child: BlocBuilder<SettingsBloc, SettingsState>(
+          builder: (context, settings) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Music App Pro',
+
+              // --- THEME ---
+              theme: _buildLightTheme(),
+              darkTheme: _buildDarkTheme(),
+              themeMode: settings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+
+              // --- LOCALIZATION ---
+              locale: settings.locale,
+              supportedLocales: const [Locale('vi'), Locale('en')],
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+
+              initialRoute: '/',
+              routes: {
+                '/login': (context) => const LoginScreen(),
+                '/home': (context) => const HomeScreen(),
+              },
+              home: const LoginScreen(),
+            );
           },
-          home: const LoginScreen(),
         ),
+      ),
+    );
+  }
+
+  /// Theme sáng
+  ThemeData _buildLightTheme() {
+    return ThemeData(
+      brightness: Brightness.light,
+      primarySwatch: Colors.teal,
+      scaffoldBackgroundColor: Colors.grey[50],
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.teal,
+        unselectedItemColor: Colors.grey,
+      ),
+      cardColor: Colors.white,
+      dividerColor: Colors.black12,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.teal,
+        brightness: Brightness.light,
+      ),
+    );
+  }
+
+  /// Theme tối (giữ nguyên style cũ)
+  ThemeData _buildDarkTheme() {
+    return ThemeData(
+      brightness: Brightness.dark,
+      primarySwatch: Colors.teal,
+      scaffoldBackgroundColor: Colors.black,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF121212),
+        selectedItemColor: Colors.tealAccent,
+        unselectedItemColor: Colors.grey,
+      ),
+      cardColor: const Color(0xFF1E1E1E),
+      dividerColor: Colors.white10,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.teal,
+        brightness: Brightness.dark,
       ),
     );
   }

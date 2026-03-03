@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # 1. Thư viện cho SQLite (Bắt buộc theo đề bài)
   sqflite: ^2.3.0

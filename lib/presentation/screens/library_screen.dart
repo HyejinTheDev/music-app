@@ -25,12 +25,12 @@ class LibraryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
                     child: Text(
                       "Thư viện của tôi",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).textTheme.titleLarge?.color,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),

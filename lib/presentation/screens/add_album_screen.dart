@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/song_model.dart';
-import '../../data/dataproviders/db_helper.dart';
 import '../../logic/album/album_bloc.dart';
 import '../../logic/album/album_event.dart';
 import '../../logic/album/album_state.dart';
@@ -17,36 +15,13 @@ class AddAlbumScreen extends StatefulWidget {
 class _AddAlbumScreenState extends State<AddAlbumScreen> {
   final _titleController = TextEditingController();
   final _coverUrlController = TextEditingController();
-
-  bool _isLoadingSongs = true;
   final List<String> _selectedSongIds = [];
-  List<Song> _localSongs = [];
-
-  final user = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {
     super.initState();
-    _loadLocalSongs();
-  }
-
-  Future<void> _loadLocalSongs() async {
-    try {
-      final allSongs = await DatabaseHelper().getSongs();
-      final currentUid = user?.uid;
-      if (mounted) {
-        setState(() {
-          _localSongs = allSongs
-              .where((song) => song.userId == currentUid)
-              .toList();
-          _isLoadingSongs = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingSongs = false);
-      }
-    }
+    // Dùng AlbumBloc thay vì gọi DatabaseHelper trực tiếp
+    context.read<AlbumBloc>().add(LoadUserSongs());
   }
 
   void _createAlbum() {
@@ -63,7 +38,6 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
       return;
     }
 
-    // Gửi event cho AlbumBloc thay vì gọi Firestore trực tiếp
     context.read<AlbumBloc>().add(
       CreateAlbum(
         title: _titleController.text.trim(),
@@ -163,7 +137,7 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
               ),
               const SizedBox(height: 30),
 
-              // 3. Danh sách nhạc từ SQLite local
+              // 3. Danh sách nhạc — dùng BLoC thay vì gọi DB trực tiếp
               const Text(
                 "Chọn bài hát đưa vào Album:",
                 style: TextStyle(
@@ -181,75 +155,43 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white10),
                   ),
-                  child: _isLoadingSongs
-                      ? const Center(
+                  child: BlocBuilder<AlbumBloc, AlbumState>(
+                    buildWhen: (prev, curr) =>
+                        curr is AlbumLoading ||
+                        curr is AlbumUserSongsLoaded ||
+                        curr is AlbumError,
+                    builder: (context, state) {
+                      if (state is AlbumLoading) {
+                        return const Center(
                           child: CircularProgressIndicator(
                             color: Colors.tealAccent,
                           ),
-                        )
-                      : _localSongs.isEmpty
-                      ? const Center(
-                          child: Text(
-                            "Bạn chưa tải lên bài hát nào.\nHãy thêm bài hát trước khi tạo Album nhé!",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white54),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: _localSongs.length,
-                          itemBuilder: (context, index) {
-                            final song = _localSongs[index];
-                            final songIdStr = song.id.toString();
+                        );
+                      }
 
-                            return CheckboxListTile(
-                              activeColor: Colors.tealAccent,
-                              checkColor: Colors.black,
-                              side: const BorderSide(color: Colors.white54),
-                              secondary: ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: Image.network(
-                                  song.coverUrl,
-                                  width: 45,
-                                  height: 45,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        width: 45,
-                                        height: 45,
-                                        color: Colors.grey[800],
-                                        child: const Icon(
-                                          Icons.music_note,
-                                          color: Colors.white54,
-                                        ),
-                                      ),
-                                ),
-                              ),
-                              title: Text(
-                                song.title,
-                                style: const TextStyle(color: Colors.white),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              subtitle: Text(
-                                song.artist,
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              value: _selectedSongIds.contains(songIdStr),
-                              onChanged: (bool? checked) {
-                                setState(() {
-                                  if (checked == true) {
-                                    _selectedSongIds.add(songIdStr);
-                                  } else {
-                                    _selectedSongIds.remove(songIdStr);
-                                  }
-                                });
-                              },
-                            );
-                          },
+                      if (state is AlbumUserSongsLoaded) {
+                        final localSongs = state.userSongs;
+                        if (localSongs.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              "Bạn chưa tải lên bài hát nào.\nHãy thêm bài hát trước khi tạo Album nhé!",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                          );
+                        }
+
+                        return _buildSongList(localSongs);
+                      }
+
+                      return const Center(
+                        child: Text(
+                          "Không tải được danh sách bài hát",
+                          style: TextStyle(color: Colors.white54),
                         ),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -288,6 +230,57 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSongList(List<Song> songs) {
+    return ListView.builder(
+      itemCount: songs.length,
+      itemBuilder: (context, index) {
+        final song = songs[index];
+        final songIdStr = song.id.toString();
+
+        return CheckboxListTile(
+          activeColor: Colors.tealAccent,
+          checkColor: Colors.black,
+          side: const BorderSide(color: Colors.white54),
+          secondary: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.network(
+              song.coverUrl,
+              width: 45,
+              height: 45,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 45,
+                height: 45,
+                color: Colors.grey[800],
+                child: const Icon(Icons.music_note, color: Colors.white54),
+              ),
+            ),
+          ),
+          title: Text(
+            song.title,
+            style: const TextStyle(color: Colors.white),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            song.artist,
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          value: _selectedSongIds.contains(songIdStr),
+          onChanged: (bool? checked) {
+            setState(() {
+              if (checked == true) {
+                _selectedSongIds.add(songIdStr);
+              } else {
+                _selectedSongIds.remove(songIdStr);
+              }
+            });
+          },
+        );
+      },
     );
   }
 }
