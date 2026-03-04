@@ -51,23 +51,19 @@ class PostRepository {
     await _firestore.collection('posts').doc(docId).delete();
   }
 
-  /// Toggle like cho bài viết
-  Future<void> toggleLike(
-    String docId,
-    bool isCurrentlyLiked,
-    int currentLikes,
-  ) async {
+  /// Toggle like cho bài viết — dùng FieldValue.increment để tránh race condition
+  Future<void> toggleLike(String docId, bool isCurrentlyLiked) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     if (isCurrentlyLiked) {
       await _firestore.collection('posts').doc(docId).update({
-        'likes': currentLikes - 1,
+        'likes': FieldValue.increment(-1),
         'likedBy': FieldValue.arrayRemove([user.uid]),
       });
     } else {
       await _firestore.collection('posts').doc(docId).update({
-        'likes': currentLikes + 1,
+        'likes': FieldValue.increment(1),
         'likedBy': FieldValue.arrayUnion([user.uid]),
       });
     }

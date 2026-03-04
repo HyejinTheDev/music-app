@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 
 // --- Repositories ---
@@ -9,6 +10,10 @@ import 'data/repositories/song_repository.dart';
 import 'data/repositories/post_repository.dart';
 import 'data/repositories/album_repository.dart';
 import 'data/repositories/notification_repository.dart';
+import 'data/repositories/follow_repository.dart';
+
+// --- Data Providers ---
+import 'data/dataproviders/db_helper.dart';
 
 // --- BLoCs ---
 import 'logic/song_bloc/song_bloc.dart';
@@ -17,6 +22,7 @@ import 'logic/song_list/song_list_event.dart';
 import 'logic/auth_bloc/auth_bloc.dart';
 import 'logic/player/player_bloc.dart';
 import 'logic/favorites/favorites_bloc.dart';
+import 'logic/favorites/favorites_event.dart';
 import 'logic/feed/feed_bloc.dart';
 import 'logic/album/album_bloc.dart';
 import 'logic/banner/banner_bloc.dart';
@@ -24,6 +30,7 @@ import 'logic/banner/banner_event.dart';
 import 'logic/profile/profile_bloc.dart';
 import 'logic/profile/profile_event.dart';
 import 'logic/history/history_bloc.dart';
+import 'logic/history/history_event.dart';
 import 'logic/settings/settings_bloc.dart';
 import 'logic/settings/settings_state.dart';
 import 'logic/notification/notification_bloc.dart';
@@ -52,62 +59,92 @@ void main() async {
   // 3. Khởi tạo Firebase Cloud Messaging
   await FcmService.initialize();
 
-  runApp(const MyApp());
+  // 4. Khởi tạo SharedPreferences cho SettingsBloc
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(MyApp(prefs: prefs));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final SharedPreferences prefs;
+
+  const MyApp({super.key, required this.prefs});
 
   @override
   Widget build(BuildContext context) {
+    final dbHelper = DatabaseHelper();
+    final followRepository = FollowRepository();
+
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider(create: (_) => SongRepository()),
         RepositoryProvider(create: (_) => PostRepository()),
         RepositoryProvider(create: (_) => AlbumRepository()),
         RepositoryProvider(create: (_) => NotificationRepository()),
+        RepositoryProvider(create: (_) => followRepository),
       ],
       child: MultiBlocProvider(
         providers: [
-          // BLoCs giữ nguyên
+          // Song BLoCs
           BlocProvider<SongListBloc>(
             create: (context) =>
                 SongListBloc(songRepository: context.read<SongRepository>())
-                  ..add(LoadSongs()),
+                  ..add(SyncAndLoadSongs()),
           ),
           BlocProvider<SongBloc>(
-            create: (context) =>
-                SongBloc(songRepository: context.read<SongRepository>()),
+            create: (context) => SongBloc(
+              songRepository: context.read<SongRepository>(),
+              notificationRepository: context.read<NotificationRepository>(),
+            ),
           ),
 
-          // BLoCs mới
+          // Auth
           BlocProvider<AuthBloc>(create: (_) => AuthBloc()),
+
+          // Player
           BlocProvider<PlayerBloc>(create: (_) => PlayerBloc()),
-          BlocProvider<FavoritesBloc>(create: (_) => FavoritesBloc()),
-          BlocProvider<HistoryBloc>(create: (_) => HistoryBloc()),
+
+          // Favorites — persist vào SQLite
+          BlocProvider<FavoritesBloc>(
+            create: (_) =>
+                FavoritesBloc(dbHelper: dbHelper)..add(LoadFavorites()),
+          ),
+
+          // History — persist vào SQLite
+          BlocProvider<HistoryBloc>(
+            create: (_) => HistoryBloc(dbHelper: dbHelper)..add(LoadHistory()),
+          ),
+
+          // Feed
           BlocProvider<FeedBloc>(
             create: (context) => FeedBloc(
               postRepository: context.read<PostRepository>(),
               notificationRepository: context.read<NotificationRepository>(),
             ),
           ),
+
+          // Album
           BlocProvider<AlbumBloc>(
             create: (context) =>
                 AlbumBloc(albumRepository: context.read<AlbumRepository>()),
           ),
+
+          // Banner
           BlocProvider<BannerBloc>(
             create: (_) => BannerBloc()..add(LoadBanners()),
           ),
+
+          // Profile
           BlocProvider<ProfileBloc>(
             create: (context) =>
                 ProfileBloc(songRepository: context.read<SongRepository>())
                   ..add(LoadProfile()),
           ),
 
-          // Settings BLoC — quản lý theme + locale
-          BlocProvider<SettingsBloc>(create: (_) => SettingsBloc()),
+          // Settings — persist vào SharedPreferences
+          BlocProvider<SettingsBloc>(create: (_) => SettingsBloc(prefs: prefs)),
 
-          // Notification BLoC — lắng nghe thông báo cá nhân từ Firestore
+          // Notification
           BlocProvider<NotificationBloc>(
             create: (context) =>
                 NotificationBloc(
@@ -118,9 +155,11 @@ class MyApp extends StatelessWidget {
                   ..add(StartListeningNotifications()),
           ),
 
-          // Follow BLoC
+          // Follow — dùng FollowRepository (MVVM)
           BlocProvider<FollowBloc>(
-            create: (_) => FollowBloc()..add(LoadFollowing()),
+            create: (context) =>
+                FollowBloc(followRepository: context.read<FollowRepository>())
+                  ..add(LoadFollowing()),
           ),
         ],
 
@@ -146,7 +185,6 @@ class MyApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
-              initialRoute: '/',
               routes: {
                 '/login': (context) => const LoginScreen(),
                 '/home': (context) => const HomeScreen(),
@@ -184,7 +222,7 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  /// Theme tối (giữ nguyên style cũ)
+  /// Theme tối
   ThemeData _buildDarkTheme() {
     return ThemeData(
       brightness: Brightness.dark,

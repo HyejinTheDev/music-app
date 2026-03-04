@@ -107,6 +107,10 @@ class _NotificationTile extends StatelessWidget {
         return Icons.music_note;
       case NotificationType.newPost:
         return Icons.article;
+      case NotificationType.like:
+        return Icons.favorite;
+      case NotificationType.comment:
+        return Icons.chat_bubble;
       case NotificationType.follow:
         return Icons.person_add;
       case NotificationType.system:
@@ -120,6 +124,10 @@ class _NotificationTile extends StatelessWidget {
         return Colors.tealAccent;
       case NotificationType.newPost:
         return Colors.purpleAccent;
+      case NotificationType.like:
+        return Colors.pinkAccent;
+      case NotificationType.comment:
+        return Colors.greenAccent;
       case NotificationType.follow:
         return Colors.blueAccent;
       case NotificationType.system:

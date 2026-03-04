@@ -41,14 +41,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<PlayerBloc, PlayerState>(
-      listenWhen: (prev, curr) =>
-          curr is PlayerPlaying && prev.currentSong?.id != curr.currentSong?.id,
-      listener: (context, state) {
-        if (state.currentSong != null) {
-          context.read<HistoryBloc>().add(AddToHistory(state.currentSong!));
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        // Thêm bài hát vào lịch sử khi bắt đầu phát bài mới
+        BlocListener<PlayerBloc, PlayerState>(
+          listenWhen: (prev, curr) =>
+              curr is PlayerPlaying &&
+              prev.currentSong?.id != curr.currentSong?.id,
+          listener: (context, state) {
+            if (state.currentSong != null) {
+              context.read<HistoryBloc>().add(AddToHistory(state.currentSong!));
+            }
+          },
+        ),
+        // Cập nhật playlist khi danh sách bài hát thay đổi (đúng: BlocListener, không phải BlocBuilder)
+        BlocListener<SongListBloc, SongListState>(
+          listenWhen: (prev, curr) => curr is SongListLoaded,
+          listener: (context, state) {
+            if (state is SongListLoaded) {
+              context.read<PlayerBloc>().add(UpdatePlaylist(state.songs));
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         bottomNavigationBar: _buildBottomNavBar(),
@@ -61,11 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
             }
 
             if (songListState is SongListLoaded) {
-              // Cập nhật playlist cho PlayerBloc
-              context.read<PlayerBloc>().add(
-                UpdatePlaylist(songListState.songs),
-              );
-
               return _buildMainContent(songListState);
             }
 
@@ -73,7 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
               return Center(
                 child: Text(
                   "Lỗi: ${songListState.message}",
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
               );
             }

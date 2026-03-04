@@ -1,50 +1,70 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/song_model.dart';
+import '../../data/dataproviders/db_helper.dart';
 import 'favorites_event.dart';
 import 'favorites_state.dart';
 
 /// BLoC quản lý danh sách bài hát yêu thích
-/// Thay thế _likedSongIds và _favoriteSongs trong home_screen.dart
+/// Dữ liệu được persist vào SQLite qua DatabaseHelper
 class FavoritesBloc extends Bloc<FavoritesEvent, FavoritesState> {
-  // Danh sách nội bộ (mutable) để quản lý state
-  final List<Song> _favoriteSongs = [];
-  final List<String> _likedSongIds = [];
+  final DatabaseHelper _dbHelper;
 
-  FavoritesBloc() : super(const FavoritesInitial()) {
+  FavoritesBloc({DatabaseHelper? dbHelper})
+    : _dbHelper = dbHelper ?? DatabaseHelper(),
+      super(const FavoritesInitial()) {
     on<LoadFavorites>(_onLoadFavorites);
     on<ToggleFavorite>(_onToggleFavorite);
   }
 
-  /// Tải danh sách yêu thích — hiện tại dùng bộ nhớ RAM
-  /// Sau này có thể kết nối Firestore hoặc SQLite
-  void _onLoadFavorites(LoadFavorites event, Emitter<FavoritesState> emit) {
-    emit(
-      FavoritesLoaded(
-        favoriteSongs: List.unmodifiable(_favoriteSongs),
-        likedSongIds: List.unmodifiable(_likedSongIds),
-      ),
-    );
+  /// Tải danh sách yêu thích từ SQLite
+  Future<void> _onLoadFavorites(
+    LoadFavorites event,
+    Emitter<FavoritesState> emit,
+  ) async {
+    try {
+      final songs = await _dbHelper.getFavorites();
+      final ids = songs.map((s) => s.id.toString()).toList();
+      emit(
+        FavoritesLoaded(
+          favoriteSongs: List.unmodifiable(songs),
+          likedSongIds: List.unmodifiable(ids),
+        ),
+      );
+    } catch (e) {
+      // Fallback: emit trạng thái rỗng nếu lỗi
+      emit(const FavoritesInitial());
+    }
   }
 
-  /// Toggle yêu thích — thêm hoặc xóa bài hát
-  void _onToggleFavorite(ToggleFavorite event, Emitter<FavoritesState> emit) {
-    final songIdStr = event.song.id.toString();
+  /// Toggle yêu thích — thêm/xóa trong SQLite rồi cập nhật state
+  Future<void> _onToggleFavorite(
+    ToggleFavorite event,
+    Emitter<FavoritesState> emit,
+  ) async {
+    try {
+      final songId = event.song.id;
+      if (songId == null) return;
 
-    if (_likedSongIds.contains(songIdStr)) {
-      // Bỏ yêu thích
-      _likedSongIds.remove(songIdStr);
-      _favoriteSongs.removeWhere((s) => s.id == event.song.id);
-    } else {
-      // Thêm yêu thích
-      _likedSongIds.add(songIdStr);
-      _favoriteSongs.add(event.song);
+      final isCurrentlyFavorite = state.isFavorite(event.song);
+
+      if (isCurrentlyFavorite) {
+        // Bỏ yêu thích → xóa khỏi SQLite
+        await _dbHelper.removeFavorite(songId);
+      } else {
+        // Thêm yêu thích → insert vào SQLite
+        await _dbHelper.insertFavorite(event.song);
+      }
+
+      // Reload từ SQLite để đảm bảo consistency
+      final songs = await _dbHelper.getFavorites();
+      final ids = songs.map((s) => s.id.toString()).toList();
+      emit(
+        FavoritesLoaded(
+          favoriteSongs: List.unmodifiable(songs),
+          likedSongIds: List.unmodifiable(ids),
+        ),
+      );
+    } catch (e) {
+      // Giữ state hiện tại nếu lỗi
     }
-
-    emit(
-      FavoritesLoaded(
-        favoriteSongs: List.unmodifiable(_favoriteSongs),
-        likedSongIds: List.unmodifiable(_likedSongIds),
-      ),
-    );
   }
 }

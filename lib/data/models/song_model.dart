@@ -1,4 +1,9 @@
-class Song {
+import 'dart:convert';
+import 'package:equatable/equatable.dart';
+
+/// Model đại diện cho một bài hát
+/// Sử dụng Equatable để BLoC state comparison chính xác
+class Song extends Equatable {
   final int? id;
   final String title;
   final String artist;
@@ -8,7 +13,7 @@ class Song {
   final String? uploaderName; // Tên hiển thị của người đăng
   final String? coverImageUrl; // URL ảnh bìa do user upload
 
-  Song({
+  const Song({
     this.id,
     required this.title,
     required this.artist,
@@ -19,6 +24,30 @@ class Song {
     this.coverImageUrl,
   });
 
+  /// Tạo bản copy với các giá trị mới (immutable pattern)
+  Song copyWith({
+    int? id,
+    String? title,
+    String? artist,
+    String? lyrics,
+    String? audioUrl,
+    String? userId,
+    String? uploaderName,
+    String? coverImageUrl,
+  }) {
+    return Song(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      lyrics: lyrics ?? this.lyrics,
+      audioUrl: audioUrl ?? this.audioUrl,
+      userId: userId ?? this.userId,
+      uploaderName: uploaderName ?? this.uploaderName,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+    );
+  }
+
+  /// Chuyển thành Map cho SQLite
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'title': title,
@@ -48,6 +77,14 @@ class Song {
     );
   }
 
+  /// Serialize thành JSON string (dùng để lưu vào SQLite favorites/history)
+  String toJson() => jsonEncode(toMap());
+
+  /// Deserialize từ JSON string
+  factory Song.fromJson(String jsonStr) {
+    return Song.fromMap(jsonDecode(jsonStr) as Map<String, dynamic>);
+  }
+
   /// Nếu có ảnh bìa do user upload thì dùng, không thì dùng ảnh mặc định
   String get coverUrl {
     if (coverImageUrl != null && coverImageUrl!.isNotEmpty) {
@@ -56,4 +93,16 @@ class Song {
     final seed = id ?? 1;
     return "https://picsum.photos/seed/$seed/200/200";
   }
+
+  @override
+  List<Object?> get props => [
+    id,
+    title,
+    artist,
+    lyrics,
+    audioUrl,
+    userId,
+    uploaderName,
+    coverImageUrl,
+  ];
 }

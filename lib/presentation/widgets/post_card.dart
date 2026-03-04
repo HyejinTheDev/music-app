@@ -192,7 +192,8 @@ class PostCard extends StatelessWidget {
                       ToggleLike(
                         docId: docId,
                         isCurrentlyLiked: isLiked,
-                        currentLikes: likes,
+                        postOwnerUserId: data['userId'] ?? '',
+                        songTitle: data['songTitle'] ?? '',
                       ),
                     );
                   },

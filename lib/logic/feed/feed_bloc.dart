@@ -28,7 +28,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     emit(FeedReady());
   }
 
-  /// Tạo bài viết mới + gửi thông báo cho followers
+  /// Tạo bài viết mới + gửi thông báo
   Future<void> _onCreatePost(CreatePost event, Emitter<FeedState> emit) async {
     emit(FeedActionInProgress());
     try {
@@ -53,15 +53,33 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       // Tạo post trên Firestore
       final docRef = await postRepository.createPostAndReturnRef(post);
 
-      // Gửi thông báo cho tất cả followers
       if (user != null) {
-        await notificationRepository.notifyFollowersOfNewPost(
-          posterUserId: user.uid,
-          posterUserName: user.displayName ?? 'Người dùng ẩn danh',
-          postId: docRef.id,
-          songTitle: event.song.title,
-          caption: caption,
-        );
+        // 1. Gửi thông báo cho CHỦ BÀI HÁT (chia sẻ bài hát của họ)
+        final songOwnerId = event.song.userId;
+        if (songOwnerId != null &&
+            songOwnerId.isNotEmpty &&
+            songOwnerId != user.uid) {
+          try {
+            await notificationRepository.notifySongOwnerOfShare(
+              songOwnerUserId: songOwnerId,
+              sharerUserId: user.uid,
+              sharerUserName: user.displayName ?? 'Người dùng',
+              postId: docRef.id,
+              songTitle: event.song.title,
+            );
+          } catch (_) {}
+        }
+
+        // 2. Gửi thông báo cho followers
+        try {
+          await notificationRepository.notifyFollowersOfNewPost(
+            posterUserId: user.uid,
+            posterUserName: user.displayName ?? 'Người dùng ẩn danh',
+            postId: docRef.id,
+            songTitle: event.song.title,
+            caption: caption,
+          );
+        } catch (_) {}
       }
 
       emit(FeedActionSuccess("Đã đăng bài thành công!"));
@@ -98,14 +116,26 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
     }
   }
 
-  /// Toggle like
+  /// Toggle like — dùng FieldValue.increment (atomic, tránh race condition)
   Future<void> _onToggleLike(ToggleLike event, Emitter<FeedState> emit) async {
     try {
-      await postRepository.toggleLike(
-        event.docId,
-        event.isCurrentlyLiked,
-        event.currentLikes,
-      );
+      await postRepository.toggleLike(event.docId, event.isCurrentlyLiked);
+
+      // Gửi thông báo cho chủ bài viết khi LIKE (không phải unlike)
+      if (!event.isCurrentlyLiked && event.postOwnerUserId.isNotEmpty) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          try {
+            await notificationRepository.notifyPostOwnerOfLike(
+              postOwnerUserId: event.postOwnerUserId,
+              likerUserId: user.uid,
+              likerUserName: user.displayName ?? 'Người dùng',
+              postId: event.docId,
+              songTitle: event.songTitle,
+            );
+          } catch (_) {}
+        }
+      }
     } catch (e) {
       emit(FeedError("Lỗi like: $e"));
       emit(FeedReady());
@@ -120,10 +150,22 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
       final comment = Comment(
         userName: user?.displayName ?? 'Ẩn danh',
         text: event.text,
-        timeAgo: 'Vừa xong',
       );
 
       await postRepository.addComment(event.postId, comment);
+
+      // Gửi thông báo cho chủ bài viết
+      if (user != null && event.postOwnerUserId.isNotEmpty) {
+        try {
+          await notificationRepository.notifyPostOwnerOfComment(
+            postOwnerUserId: event.postOwnerUserId,
+            commenterUserId: user.uid,
+            commenterUserName: user.displayName ?? 'Người dùng',
+            postId: event.postId,
+            commentText: event.text,
+          );
+        } catch (_) {}
+      }
     } catch (e) {
       emit(FeedError("Lỗi bình luận: $e"));
       emit(FeedReady());

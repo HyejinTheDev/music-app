@@ -3,6 +3,9 @@ import '../../data/models/song_model.dart';
 /// Các sự kiện của HistoryBloc
 abstract class HistoryEvent {}
 
+/// Tải lịch sử từ SQLite khi khởi động
+class LoadHistory extends HistoryEvent {}
+
 /// Thêm bài hát vào lịch sử khi phát
 class AddToHistory extends HistoryEvent {
   final Song song;

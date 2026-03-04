@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'local_notification_service.dart';
 
 /// Service quản lý Firebase Cloud Messaging (FCM)
@@ -55,8 +56,8 @@ class FcmService {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'fcmToken': token,
       }, SetOptions(merge: true));
-    } catch (_) {
-      // Bỏ qua lỗi — token sẽ được lưu lại khi app restart
+    } catch (e) {
+      debugPrint('[FcmService] Lỗi lưu device token: $e');
     }
   }
 }

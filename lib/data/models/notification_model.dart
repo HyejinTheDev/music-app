@@ -86,6 +86,8 @@ class NotificationModel {
 enum NotificationType {
   newSong, // Nghệ sĩ bạn theo dõi đăng bài hát mới
   newPost, // Nghệ sĩ bạn theo dõi đăng bài viết trên feed
+  like, // Ai đó thích bài viết của bạn
+  comment, // Ai đó bình luận bài viết của bạn
   follow, // Có người theo dõi bạn
   system, // Thông báo hệ thống
 }

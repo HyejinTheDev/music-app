@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "71696684032",
+    "firebase_url": "https://music-app-pro-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "music-app-pro-v2",
     "storage_bucket": "music-app-pro-v2.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.example.music_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "71696684032-b3o6d0ifg51dsac7tk075980orc23f5d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.music_app",
+            "certificate_hash": "7963bfb42f7b13c51b11bbf7046430c48a89cc35"
+          }
+        },
+        {
+          "client_id": "71696684032-jgnjneddekabcbbkb8ni5j4mthjnt4ck.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBakqZPE9ROZVEiOkLVydsJlz9Q3VF4tsU"
@@ -20,7 +34,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "71696684032-jgnjneddekabcbbkb8ni5j4mthjnt4ck.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "71696684032-80a900l88grcsg887hrsh06b8jmcj6il.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.musicApp"
+              }
+            }
+          ]
         }
       }
     }

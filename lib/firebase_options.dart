@@ -46,6 +46,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '71696684032',
     projectId: 'music-app-pro-v2',
     authDomain: 'music-app-pro-v2.firebaseapp.com',
+    databaseURL:
+        'https://music-app-pro-v2-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'music-app-pro-v2.firebasestorage.app',
     measurementId: 'G-X3R8PNPZ36',
   );
@@ -55,6 +57,8 @@ class DefaultFirebaseOptions {
     appId: '1:71696684032:android:616ea0e30cd065557af4e5',
     messagingSenderId: '71696684032',
     projectId: 'music-app-pro-v2',
+    databaseURL:
+        'https://music-app-pro-v2-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'music-app-pro-v2.firebasestorage.app',
   );
 
@@ -63,6 +67,8 @@ class DefaultFirebaseOptions {
     appId: '1:71696684032:ios:9903c3810347b6d47af4e5',
     messagingSenderId: '71696684032',
     projectId: 'music-app-pro-v2',
+    databaseURL:
+        'https://music-app-pro-v2-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'music-app-pro-v2.firebasestorage.app',
     iosBundleId: 'com.example.musicApp',
   );
@@ -72,6 +78,8 @@ class DefaultFirebaseOptions {
     appId: '1:71696684032:ios:9903c3810347b6d47af4e5',
     messagingSenderId: '71696684032',
     projectId: 'music-app-pro-v2',
+    databaseURL:
+        'https://music-app-pro-v2-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'music-app-pro-v2.firebasestorage.app',
     iosBundleId: 'com.example.musicApp',
   );
@@ -82,6 +90,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '71696684032',
     projectId: 'music-app-pro-v2',
     authDomain: 'music-app-pro-v2.firebaseapp.com',
+    databaseURL:
+        'https://music-app-pro-v2-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'music-app-pro-v2.firebasestorage.app',
     measurementId: 'G-FE2SRN8GB7',
   );

@@ -263,12 +263,38 @@ void showSongOptionsMenu({
                       ),
                       onTap: () {
                         Navigator.pop(context);
-                        context.read<SongBloc>().add(DeleteSongEvent(song.id!));
-                        context.read<SongListBloc>().add(LoadSongs());
-                        if (currentSong?.id == song.id) {
-                          player.stop();
-                          playerBloc.add(StopRequested());
-                        }
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Xác nhận xóa'),
+                            content: Text(
+                              'Bạn có chắc chắn muốn xóa bài hát "${song.title}" không?\n\nHành động này không thể hoàn tác.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Hủy'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  context.read<SongBloc>().add(
+                                    DeleteSongEvent(song.id!),
+                                  );
+                                  context.read<SongListBloc>().add(LoadSongs());
+                                  if (currentSong?.id == song.id) {
+                                    player.stop();
+                                    playerBloc.add(StopRequested());
+                                  }
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.redAccent,
+                                ),
+                                child: const Text('Xóa'),
+                              ),
+                            ],
+                          ),
+                        );
                       },
                     ),
                   ],

@@ -1,29 +1,50 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'song_event.dart';
 import 'song_state.dart';
 import '../../data/repositories/song_repository.dart';
+import '../../data/repositories/notification_repository.dart';
 
 class SongBloc extends Bloc<SongEvent, SongState> {
   final SongRepository songRepository;
+  final NotificationRepository? notificationRepository;
 
-  SongBloc({required this.songRepository}) : super(SongLoading()) {
-
+  SongBloc({required this.songRepository, this.notificationRepository})
+    : super(SongLoading()) {
     // Xử lý: Load danh sách
     on<LoadSongs>((event, emit) async {
-      emit(SongLoading()); // Bật trạng thái loading
+      emit(SongLoading());
       try {
         final songs = await songRepository.getLocalSongs();
-        emit(SongLoaded(songs)); // Trả về danh sách
+        emit(SongLoaded(songs));
       } catch (e) {
         emit(SongError("Lỗi tải dữ liệu: $e"));
       }
     });
 
-    // Xử lý: Thêm bài hát
+    // Xử lý: Thêm bài hát → lưu local + sync cloud + thông báo followers
     on<AddSongEvent>((event, emit) async {
       try {
         await songRepository.addSong(event.song);
-        add(LoadSongs()); // Thêm xong thì tự động load lại danh sách
+        add(LoadSongs());
+
+        // Sync cloud (không chặn UI)
+        try {
+          await songRepository.syncToCloud();
+        } catch (_) {}
+
+        // Gửi thông báo cho followers (tách riêng để lỗi sync không ảnh hưởng)
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null && notificationRepository != null) {
+            await notificationRepository!.notifyFollowersOfNewSong(
+              uploaderUserId: user.uid,
+              uploaderUserName: user.displayName ?? 'Người dùng',
+              songTitle: event.song.title,
+              songArtist: event.song.artist,
+            );
+          }
+        } catch (_) {}
       } catch (e) {
         emit(SongError("Không thể thêm bài hát"));
       }
@@ -33,7 +54,11 @@ class SongBloc extends Bloc<SongEvent, SongState> {
     on<UpdateSongEvent>((event, emit) async {
       try {
         await songRepository.updateSong(event.song);
-        add(LoadSongs()); // Sửa xong load lại
+        add(LoadSongs());
+
+        try {
+          await songRepository.syncToCloud();
+        } catch (_) {}
       } catch (e) {
         emit(SongError("Lỗi cập nhật"));
       }
@@ -43,7 +68,11 @@ class SongBloc extends Bloc<SongEvent, SongState> {
     on<DeleteSongEvent>((event, emit) async {
       try {
         await songRepository.deleteSong(event.id);
-        add(LoadSongs()); // Xóa xong load lại
+        add(LoadSongs());
+
+        try {
+          await songRepository.syncToCloud();
+        } catch (_) {}
       } catch (e) {
         emit(SongError("Lỗi xóa bài hát"));
       }

@@ -88,7 +88,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
 
-    _listenStartTime = DateTime.now();
+    // Trừ 30 giây để tránh bỏ lỡ notification do lệch đồng hồ giữa 2 thiết bị
+    _listenStartTime = DateTime.now().subtract(const Duration(seconds: 30));
     _notifSub?.cancel();
 
     _notifSub = notificationRepository
@@ -110,12 +111,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
             // Thêm vào danh sách in-app
             add(AddNotification(notification));
 
-            // Chỉ show local push cho thông báo MỚI (sau khi bắt đầu lắng nghe)
+            // Show local push cho thông báo MỚI
             if (_listenStartTime != null &&
                 notification.timestamp.isAfter(_listenStartTime!)) {
-              _notifIdCounter++;
               LocalNotificationService.showNotification(
-                id: _notifIdCounter,
+                id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
                 title: notification.title,
                 body: notification.body,
               );

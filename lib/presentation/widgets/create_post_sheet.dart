@@ -12,6 +12,7 @@ import '../../data/repositories/post_repository.dart';
 void showCreatePostSheet(
   BuildContext context, {
   required List<Song> favoriteSongs,
+  List<Song> allSongs = const [],
 }) {
   final captionController = TextEditingController();
   Song? selectedSong;
@@ -179,6 +180,7 @@ void showCreatePostSheet(
                   Expanded(
                     child: _buildSongListForSharing(
                       favoriteSongs: favoriteSongs,
+                      allSongs: allSongs,
                       postRepository: postRepository,
                       selectedSong: selectedSong,
                       onSelect: (song) =>
@@ -198,6 +200,7 @@ void showCreatePostSheet(
 /// Lấy danh sách bài hát để chọn chia sẻ
 Widget _buildSongListForSharing({
   required List<Song> favoriteSongs,
+  List<Song> allSongs = const [],
   required PostRepository postRepository,
   required Song? selectedSong,
   required Function(Song) onSelect,
@@ -227,8 +230,13 @@ Widget _buildSongListForSharing({
         }).toList();
       }
 
+      // Fallback 1: bài hát yêu thích
       if (songsToShow.isEmpty) {
         songsToShow = favoriteSongs;
+      }
+      // Fallback 2: tất cả bài hát từ SQLite local
+      if (songsToShow.isEmpty) {
+        songsToShow = allSongs;
       }
 
       if (songsToShow.isEmpty) {

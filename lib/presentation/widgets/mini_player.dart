@@ -4,9 +4,6 @@ import 'package:just_audio/just_audio.dart';
 import '../../data/models/song_model.dart';
 import '../../logic/player/player_bloc.dart';
 import '../../logic/player/player_event.dart';
-import '../../logic/favorites/favorites_bloc.dart';
-import '../../logic/favorites/favorites_event.dart';
-import '../../logic/favorites/favorites_state.dart';
 import '../screens/song_detail_screen.dart';
 
 /// MiniPlayer thu gọn — dùng PlayerBloc thay vì callback
@@ -81,6 +78,19 @@ class MiniPlayer extends StatelessWidget {
                     width: 45,
                     height: 45,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 45,
+                      height: 45,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(35),
+                      ),
+                      child: const Icon(
+                        Icons.music_note,
+                        color: Colors.white54,
+                        size: 24,
+                      ),
+                    ),
                   ),
                 ),
               ),

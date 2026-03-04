@@ -5,9 +5,15 @@ import '../../logic/feed/feed_bloc.dart';
 import '../../logic/feed/feed_event.dart';
 import '../../data/repositories/post_repository.dart';
 
+import '../../data/models/comment_model.dart';
+
 /// Bottom sheet hiển thị bình luận của bài viết
 /// Tách từ feed_screen._showCommentSheet
-void showCommentSheet(BuildContext context, String docId) {
+void showCommentSheet(
+  BuildContext context,
+  String docId, {
+  String postOwnerUserId = '',
+}) {
   final commentController = TextEditingController();
   final postRepository = context.read<PostRepository>();
   final feedBloc = context.read<FeedBloc>();
@@ -92,11 +98,10 @@ void showCommentSheet(BuildContext context, String docId) {
                     return ListView.builder(
                       itemCount: comments.length,
                       itemBuilder: (context, index) {
-                        final cData =
-                            comments[index].data() as Map<String, dynamic>;
-                        final userName = cData['userName'] ?? 'Ẩn danh';
-                        final text = cData['text'] ?? '';
-                        final timeAgo = cData['timeAgo'] ?? '';
+                        final comment = Comment.fromFirestore(comments[index]);
+                        final userName = comment.userName;
+                        final text = comment.text;
+                        final timeAgo = comment.timeAgo;
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -205,6 +210,7 @@ void showCommentSheet(BuildContext context, String docId) {
                             AddComment(
                               postId: docId,
                               text: commentController.text.trim(),
+                              postOwnerUserId: postOwnerUserId,
                             ),
                           );
                           commentController.clear();

@@ -6,6 +6,8 @@ import '../../data/models/song_model.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../logic/feed/feed_bloc.dart';
 import '../../logic/feed/feed_state.dart';
+import '../../logic/song_list/song_list_bloc.dart';
+import '../../logic/song_list/song_list_state.dart';
 import '../widgets/post_card.dart';
 import '../widgets/comment_sheet.dart';
 import '../widgets/create_post_sheet.dart';
@@ -68,10 +70,17 @@ class FeedScreen extends StatelessWidget {
                       color: Theme.of(context).iconTheme.color,
                       size: 28,
                     ),
-                    onPressed: () => showCreatePostSheet(
-                      context,
-                      favoriteSongs: favoriteSongs,
-                    ),
+                    onPressed: () {
+                      final songListState = context.read<SongListBloc>().state;
+                      final localSongs = songListState is SongListLoaded
+                          ? songListState.songs
+                          : <Song>[];
+                      showCreatePostSheet(
+                        context,
+                        favoriteSongs: favoriteSongs,
+                        allSongs: localSongs,
+                      );
+                    },
                   ),
                 ],
               ),
@@ -138,7 +147,11 @@ class FeedScreen extends StatelessWidget {
                         player: player,
                         onPlaySong: onPlaySong,
                         onToggleFavorite: onToggleFavorite,
-                        onCommentTap: () => showCommentSheet(context, docId),
+                        onCommentTap: () => showCommentSheet(
+                          context,
+                          docId,
+                          postOwnerUserId: data['userId'] ?? '',
+                        ),
                       );
                     },
                   );

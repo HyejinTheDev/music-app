@@ -33,12 +33,14 @@ class DeletePost extends FeedEvent {
 class ToggleLike extends FeedEvent {
   final String docId;
   final bool isCurrentlyLiked;
-  final int currentLikes;
+  final String postOwnerUserId; // Chủ bài viết → gửi thông báo
+  final String songTitle; // Tên bài hát → hiện trong thông báo
 
   ToggleLike({
     required this.docId,
     required this.isCurrentlyLiked,
-    required this.currentLikes,
+    this.postOwnerUserId = '',
+    this.songTitle = '',
   });
 }
 
@@ -46,6 +48,11 @@ class ToggleLike extends FeedEvent {
 class AddComment extends FeedEvent {
   final String postId;
   final String text;
+  final String postOwnerUserId; // Chủ bài viết → gửi thông báo
 
-  AddComment({required this.postId, required this.text});
+  AddComment({
+    required this.postId,
+    required this.text,
+    this.postOwnerUserId = '',
+  });
 }

@@ -1,4 +1,7 @@
 abstract class SongListEvent {}
 
-// Sự kiện yêu cầu tải danh sách bài hát
+/// Chỉ đọc từ SQLite local — nhanh, không sync cloud
 class LoadSongs extends SongListEvent {}
+
+/// Sync từ cloud + load local — dùng khi lần đầu mở app hoặc bấm ☁️
+class SyncAndLoadSongs extends SongListEvent {}

@@ -6,14 +6,12 @@ class Comment {
   final String? id; // Firestore document ID
   final String userName;
   final String text;
-  final String timeAgo;
   final Timestamp? timestamp;
 
   const Comment({
     this.id,
     required this.userName,
     required this.text,
-    this.timeAgo = '',
     this.timestamp,
   });
 
@@ -24,7 +22,6 @@ class Comment {
       id: doc.id,
       userName: data['userName'] ?? 'Ẩn danh',
       text: data['text'] ?? '',
-      timeAgo: data['timeAgo'] ?? '',
       timestamp: data['timestamp'] as Timestamp?,
     );
   }
@@ -34,8 +31,22 @@ class Comment {
     return {
       'userName': userName,
       'text': text,
-      'timeAgo': timeAgo,
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };
+  }
+
+  /// Tính thời gian tương đối từ timestamp
+  /// Trả về chuỗi như "Vừa xong", "5 phút trước", "2 giờ trước"
+  String get timeAgo {
+    if (timestamp == null) return 'Vừa xong';
+    final dateTime = timestamp!.toDate();
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+
+    if (diff.inMinutes < 1) return 'Vừa xong';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+    if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+    if (diff.inDays < 7) return '${diff.inDays} ngày trước';
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 }

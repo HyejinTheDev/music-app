@@ -158,9 +158,22 @@ class HomeContent extends StatelessWidget {
                   );
                 },
               ),
+              // --- NÚT ĐỒNG BỘ 2 CHIỀU ---
               IconButton(
-                icon: Icon(Icons.refresh, color: theme.iconTheme.color),
-                onPressed: () => context.read<SongListBloc>().add(LoadSongs()),
+                icon: Icon(Icons.cloud_sync, color: theme.iconTheme.color),
+                tooltip: 'Đồng bộ dữ liệu',
+                onPressed: () {
+                  // Push local → Pull all users → Load
+                  context.read<SongListBloc>().add(SyncAndLoadSongs());
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đang đồng bộ dữ liệu...'),
+                      duration: Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
               ),
             ],
           ),
