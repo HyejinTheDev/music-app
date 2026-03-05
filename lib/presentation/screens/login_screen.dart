@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import '../../logic/auth_bloc/auth_bloc.dart';
+import '../../logic/auth_bloc/auth_event.dart';
+import '../../logic/auth_bloc/auth_state.dart';
 import '../../logic/song_list/song_list_bloc.dart';
 import '../../logic/song_list/song_list_event.dart';
+import '../../logic/profile/profile_bloc.dart';
+import '../../logic/profile/profile_event.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,82 +21,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
-
-  /// Đăng nhập bằng Email + Mật khẩu
-  Future<void> _login() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng nhập đầy đủ thông tin")),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      _goToHome();
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Lỗi đăng nhập: ${e.toString()}")));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  /// Đăng nhập bằng Google (Gmail)
-  Future<void> _loginWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      // Bước 1: Khởi tạo GoogleSignIn (v7 sử dụng singleton)
-      final googleSignIn = GoogleSignIn.instance;
-      await googleSignIn.initialize(
-        serverClientId:
-            '71696684032-jgnjneddekabcbbkb8ni5j4mthjnt4ck.apps.googleusercontent.com',
-      );
-
-      // Bước 2: Mở popup chọn tài khoản Google
-      final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
-
-      // Bước 3: Lấy thông tin xác thực từ Google
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-
-      // Bước 4: Tạo credential cho Firebase
-      final credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
-      );
-
-      // Bước 5: Đăng nhập Firebase bằng credential
-      await FirebaseAuth.instance.signInWithCredential(credential);
-
-      _goToHome();
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        // Người dùng hủy chọn tài khoản
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi đăng nhập Google: ${e.toString()}")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi đăng nhập Google: ${e.toString()}")),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
 
   /// Chuyển đến HomeScreen sau khi đăng nhập thành công
   void _goToHome() {
     if (!mounted) return;
     // Sync bài hát từ Firebase về SQLite (quan trọng khi cài lại app)
     context.read<SongListBloc>().add(SyncAndLoadSongs());
+    // Tải lại profile (ảnh, tên, email từ Google/Firebase)
+    context.read<ProfileBloc>().add(LoadProfile());
 
     Navigator.pushReplacement(
       context,
@@ -102,47 +38,112 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Đăng Nhập")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 50),
-              const Icon(Icons.music_note, size: 80, color: Colors.blue),
-              const SizedBox(height: 20),
-
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: "Email",
-                  border: OutlineInputBorder(),
-                ),
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          _goToHome();
+        } else if (state is AuthEmailNotVerified) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("Email chưa xác minh"),
+              content: Text(
+                "Chúng tôi đã gửi email xác minh đến ${state.email}.\n\n"
+                "Vui lòng mở email và bấm vào link xác minh, sau đó quay lại đăng nhập.",
               ),
-              const SizedBox(height: 10),
-
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: "Mật khẩu",
-                  border: OutlineInputBorder(),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Đã hiểu"),
                 ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 20),
+              ],
+            ),
+          );
+        } else if (state is AuthError) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text("Đăng Nhập")),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 50),
+                const Icon(Icons.music_note, size: 80, color: Colors.blue),
+                const SizedBox(height: 20),
 
-              _isLoading
-                  ? const CircularProgressIndicator()
-                  : Column(
+                TextField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: "Email",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                TextField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    labelText: "Mật khẩu",
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: true,
+                ),
+
+                // Nút quên mật khẩu
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text("Quên mật khẩu?"),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Dùng BlocBuilder để hiện loading
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, state) {
+                    if (state is AuthLoading) {
+                      return const CircularProgressIndicator();
+                    }
+                    return Column(
                       children: [
-                        // Nút đăng nhập Email
+                        // Nút đăng nhập Email — gửi event cho AuthBloc
                         SizedBox(
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: _login,
+                            onPressed: () {
+                              if (_emailController.text.isEmpty ||
+                                  _passwordController.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Vui lòng nhập đầy đủ thông tin",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              context.read<AuthBloc>().add(
+                                AuthLoginRequested(
+                                  email: _emailController.text.trim(),
+                                  password: _passwordController.text.trim(),
+                                ),
+                              );
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
@@ -172,12 +173,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 12),
 
-                        // Nút đăng nhập bằng Google
+                        // Nút đăng nhập bằng Google — gửi event cho AuthBloc
                         SizedBox(
                           width: double.infinity,
                           height: 50,
                           child: OutlinedButton.icon(
-                            onPressed: _loginWithGoogle,
+                            onPressed: () {
+                              context.read<AuthBloc>().add(
+                                AuthLoginWithGoogleRequested(),
+                              );
+                            },
                             icon: Image.network(
                               'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
                               width: 24,
@@ -201,27 +206,30 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ],
-                    ),
+                    );
+                  },
+                ),
 
-              const SizedBox(height: 15),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Chưa có tài khoản?"),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text("Đăng ký ngay"),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 15),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Chưa có tài khoản?"),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text("Đăng ký ngay"),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

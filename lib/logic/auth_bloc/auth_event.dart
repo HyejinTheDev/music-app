@@ -22,6 +22,9 @@ class AuthRegisterRequested extends AuthEvent {
   AuthRegisterRequested({required this.email, required this.password});
 }
 
+/// Đăng nhập bằng Google
+class AuthLoginWithGoogleRequested extends AuthEvent {}
+
 /// Đăng xuất
 class AuthLogoutRequested extends AuthEvent {}
 

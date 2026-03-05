@@ -1,16 +1,20 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'song_event.dart';
 import 'song_state.dart';
 import '../../data/repositories/song_repository.dart';
 import '../../data/repositories/notification_repository.dart';
+import '../../data/repositories/auth_repository.dart';
 
 class SongBloc extends Bloc<SongEvent, SongState> {
   final SongRepository songRepository;
   final NotificationRepository? notificationRepository;
+  final AuthRepository authRepository;
 
-  SongBloc({required this.songRepository, this.notificationRepository})
-    : super(SongLoading()) {
+  SongBloc({
+    required this.songRepository,
+    this.notificationRepository,
+    required this.authRepository,
+  }) : super(SongLoading()) {
     // Xử lý: Load danh sách
     on<LoadSongs>((event, emit) async {
       emit(SongLoading());
@@ -35,7 +39,7 @@ class SongBloc extends Bloc<SongEvent, SongState> {
 
         // Gửi thông báo cho followers (tách riêng để lỗi sync không ảnh hưởng)
         try {
-          final user = FirebaseAuth.instance.currentUser;
+          final user = authRepository.currentUser;
           if (user != null && notificationRepository != null) {
             await notificationRepository!.notifyFollowersOfNewSong(
               uploaderUserId: user.uid,

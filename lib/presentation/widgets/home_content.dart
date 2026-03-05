@@ -66,15 +66,28 @@ class HomeContent extends StatelessWidget {
             children: [
               _buildAppBar(context, loc),
               _buildSectionTitle(context, loc.translate('featured_artists')),
-              ArtistBanner(
-                artists: ArtistProfile.fromSongs(songs),
-                onTap: (artist) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ArtistProfileScreen(artist: artist, allSongs: songs),
-                    ),
+              FutureBuilder<List<ArtistProfile>>(
+                future: ArtistProfile.fromSongs(songs),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const SizedBox(
+                      height: 140,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return ArtistBanner(
+                    artists: snapshot.data!,
+                    onTap: (artist) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ArtistProfileScreen(
+                            artist: artist,
+                            allSongs: songs,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),

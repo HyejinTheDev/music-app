@@ -1,20 +1,24 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/post_model.dart';
 import '../../data/models/comment_model.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../data/repositories/notification_repository.dart';
+import '../../data/repositories/auth_repository.dart';
 import 'feed_event.dart';
 import 'feed_state.dart';
 
 /// BLoC quản lý toàn bộ logic CRUD cho bài viết trên Feed
-/// Tách từ logic Firestore trực tiếp trong feed_screen.dart và home_screen.dart
+/// Sử dụng AuthRepository (MVVM) thay vì gọi FirebaseAuth trực tiếp
 class FeedBloc extends Bloc<FeedEvent, FeedState> {
   final PostRepository postRepository;
   final NotificationRepository notificationRepository;
+  final AuthRepository authRepository;
 
-  FeedBloc({required this.postRepository, required this.notificationRepository})
-    : super(FeedLoading()) {
+  FeedBloc({
+    required this.postRepository,
+    required this.notificationRepository,
+    required this.authRepository,
+  }) : super(FeedLoading()) {
     on<LoadFeed>(_onLoadFeed);
     on<CreatePost>(_onCreatePost);
     on<EditPost>(_onEditPost);
@@ -32,7 +36,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   Future<void> _onCreatePost(CreatePost event, Emitter<FeedState> emit) async {
     emit(FeedActionInProgress());
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = authRepository.currentUser;
       final caption = event.caption.isNotEmpty
           ? event.caption
           : "Đang nghe bài này 🎵";
@@ -123,7 +127,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
 
       // Gửi thông báo cho chủ bài viết khi LIKE (không phải unlike)
       if (!event.isCurrentlyLiked && event.postOwnerUserId.isNotEmpty) {
-        final user = FirebaseAuth.instance.currentUser;
+        final user = authRepository.currentUser;
         if (user != null) {
           try {
             await notificationRepository.notifyPostOwnerOfLike(
@@ -145,7 +149,7 @@ class FeedBloc extends Bloc<FeedEvent, FeedState> {
   /// Thêm bình luận
   Future<void> _onAddComment(AddComment event, Emitter<FeedState> emit) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = authRepository.currentUser;
 
       final comment = Comment(
         userName: user?.displayName ?? 'Ẩn danh',

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'song_model.dart';
 
 /// Model đại diện cho một nghệ sĩ (tài khoản người dùng)
@@ -17,7 +18,8 @@ class ArtistProfile {
 
   /// Tạo danh sách ArtistProfile từ danh sách Song
   /// Nhóm theo userId, loại bỏ trùng lặp
-  static List<ArtistProfile> fromSongs(List<Song> songs) {
+  /// Lấy ảnh đại diện từ Firestore (users/{uid}/photoUrl)
+  static Future<List<ArtistProfile>> fromSongs(List<Song> songs) async {
     final Map<String, List<Song>> grouped = {};
 
     for (final song in songs) {
@@ -27,15 +29,33 @@ class ArtistProfile {
       grouped[uid]!.add(song);
     }
 
-    return grouped.entries.map((entry) {
+    final firestore = FirebaseFirestore.instance;
+    final List<ArtistProfile> artists = [];
+
+    for (final entry in grouped.entries) {
       final userSongs = entry.value;
       final firstSong = userSongs.first;
-      return ArtistProfile(
-        userId: entry.key,
-        displayName: firstSong.uploaderName ?? firstSong.artist,
-        avatarUrl: firstSong.coverUrl,
-        songCount: userSongs.length,
+
+      // Lấy photoUrl từ Firestore
+      String? photoUrl;
+      try {
+        final doc = await firestore.collection('users').doc(entry.key).get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          photoUrl = data['photoUrl'];
+        }
+      } catch (_) {}
+
+      artists.add(
+        ArtistProfile(
+          userId: entry.key,
+          displayName: firstSong.uploaderName ?? firstSong.artist,
+          avatarUrl: photoUrl,
+          songCount: userSongs.length,
+        ),
       );
-    }).toList();
+    }
+
+    return artists;
   }
 }

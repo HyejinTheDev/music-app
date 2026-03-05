@@ -1,18 +1,20 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '../../data/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 /// BLoC quản lý toàn bộ xác thực người dùng
-/// Tập trung logic từ login_screen.dart, register_screen.dart, profile_screen.dart
+/// Sử dụng AuthRepository (MVVM) thay vì gọi FirebaseAuth trực tiếp
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final AuthRepository authRepository;
   StreamSubscription<User?>? _authSubscription;
 
-  AuthBloc() : super(AuthInitial()) {
+  AuthBloc({required this.authRepository}) : super(AuthInitial()) {
     // Lắng nghe thay đổi trạng thái auth từ Firebase
-    _authSubscription = _firebaseAuth.authStateChanges().listen((user) {
+    _authSubscription = authRepository.authStateChanges().listen((user) {
       add(AuthStateChanged(user));
     });
 
@@ -27,7 +29,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // Xử lý: Kiểm tra trạng thái đăng nhập
     on<AuthCheckRequested>((event, emit) {
-      final user = _firebaseAuth.currentUser;
+      final user = authRepository.currentUser;
       if (user != null) {
         emit(AuthAuthenticated(user));
       } else {
@@ -35,14 +37,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     });
 
-    // Xử lý: Đăng nhập
+    // Xử lý: Đăng nhập bằng Email
     on<AuthLoginRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        await _firebaseAuth.signInWithEmailAndPassword(
+        final credential = await authRepository.signInWithEmail(
           email: event.email,
           password: event.password,
         );
+        // Kiểm tra email đã xác minh chưa
+        if (credential.user != null && !credential.user!.emailVerified) {
+          // Gửi lại email xác minh
+          await authRepository.sendEmailVerification();
+          // Đăng xuất vì chưa xác minh
+          await authRepository.signOut();
+          emit(AuthEmailNotVerified(event.email));
+          return;
+        }
         // AuthStateChanged sẽ tự động emit AuthAuthenticated
       } on FirebaseAuthException catch (e) {
         emit(AuthError(_mapFirebaseError(e.code)));
@@ -53,16 +64,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     });
 
+    // Xử lý: Đăng nhập bằng Google
+    on<AuthLoginWithGoogleRequested>((event, emit) async {
+      emit(AuthLoading());
+      try {
+        await authRepository.signInWithGoogle();
+        // AuthStateChanged sẽ tự động emit AuthAuthenticated
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          // Người dùng hủy chọn tài khoản — quay về trạng thái cũ
+          emit(AuthUnauthenticated());
+          return;
+        }
+        emit(AuthError("Lỗi đăng nhập Google: ${e.toString()}"));
+        emit(AuthUnauthenticated());
+      } catch (e) {
+        emit(AuthError("Lỗi đăng nhập Google: ${e.toString()}"));
+        emit(AuthUnauthenticated());
+      }
+    });
+
     // Xử lý: Đăng ký
     on<AuthRegisterRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        await _firebaseAuth.createUserWithEmailAndPassword(
+        await authRepository.register(
           email: event.email,
           password: event.password,
         );
-        // Đăng ký xong → đăng xuất để user tự đăng nhập lại
-        await _firebaseAuth.signOut();
         emit(AuthRegisterSuccess());
         emit(AuthUnauthenticated());
       } on FirebaseAuthException catch (e) {
@@ -78,7 +107,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        await _firebaseAuth.signOut();
+        await authRepository.signOut();
         // AuthStateChanged sẽ tự động emit AuthUnauthenticated
       } catch (e) {
         emit(AuthError("Lỗi đăng xuất: ${e.toString()}"));
@@ -87,7 +116,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   /// Lấy user hiện tại (tiện lợi)
-  User? get currentUser => _firebaseAuth.currentUser;
+  User? get currentUser => authRepository.currentUser;
 
   /// Map mã lỗi Firebase sang thông báo tiếng Việt
   String _mapFirebaseError(String code) {

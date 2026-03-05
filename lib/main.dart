@@ -11,6 +11,7 @@ import 'data/repositories/post_repository.dart';
 import 'data/repositories/album_repository.dart';
 import 'data/repositories/notification_repository.dart';
 import 'data/repositories/follow_repository.dart';
+import 'data/repositories/auth_repository.dart';
 
 // --- Data Providers ---
 import 'data/dataproviders/db_helper.dart';
@@ -77,6 +78,7 @@ class MyApp extends StatelessWidget {
 
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider(create: (_) => AuthRepository()),
         RepositoryProvider(create: (_) => SongRepository()),
         RepositoryProvider(create: (_) => PostRepository()),
         RepositoryProvider(create: (_) => AlbumRepository()),
@@ -95,11 +97,15 @@ class MyApp extends StatelessWidget {
             create: (context) => SongBloc(
               songRepository: context.read<SongRepository>(),
               notificationRepository: context.read<NotificationRepository>(),
+              authRepository: context.read<AuthRepository>(),
             ),
           ),
 
           // Auth
-          BlocProvider<AuthBloc>(create: (_) => AuthBloc()),
+          BlocProvider<AuthBloc>(
+            create: (context) =>
+                AuthBloc(authRepository: context.read<AuthRepository>()),
+          ),
 
           // Player
           BlocProvider<PlayerBloc>(create: (_) => PlayerBloc()),
@@ -120,6 +126,7 @@ class MyApp extends StatelessWidget {
             create: (context) => FeedBloc(
               postRepository: context.read<PostRepository>(),
               notificationRepository: context.read<NotificationRepository>(),
+              authRepository: context.read<AuthRepository>(),
             ),
           ),
 

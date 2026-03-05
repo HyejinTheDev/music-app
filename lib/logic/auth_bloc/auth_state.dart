@@ -19,6 +19,13 @@ class AuthAuthenticated extends AuthState {
 /// Chưa đăng nhập
 class AuthUnauthenticated extends AuthState {}
 
+/// Email chưa được xác minh
+class AuthEmailNotVerified extends AuthState {
+  final String email;
+
+  AuthEmailNotVerified(this.email);
+}
+
 /// Đăng ký thành công (chuyển về trang login)
 class AuthRegisterSuccess extends AuthState {}
 
