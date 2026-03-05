@@ -120,12 +120,12 @@ class _ArtistProfileView extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.tealAccent.withOpacity(0.6),
+                        color: Colors.tealAccent.withValues(alpha: 0.6),
                         width: 3,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.tealAccent.withOpacity(0.25),
+                          color: Colors.tealAccent.withValues(alpha: 0.25),
                           blurRadius: 20,
                           spreadRadius: 2,
                         ),

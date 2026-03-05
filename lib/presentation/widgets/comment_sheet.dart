@@ -110,8 +110,8 @@ void showCommentSheet(
                             children: [
                               CircleAvatar(
                                 radius: 16,
-                                backgroundColor: Colors.tealAccent.withOpacity(
-                                  0.2,
+                                backgroundColor: Colors.tealAccent.withValues(
+                                  alpha: 0.2,
                                 ),
                                 child: Text(
                                   userName.isNotEmpty
@@ -157,7 +157,7 @@ void showCommentSheet(
                                       text,
                                       style: TextStyle(
                                         color: theme.textTheme.bodyLarge?.color
-                                            ?.withOpacity(0.85),
+                                            ?.withValues(alpha: 0.85),
                                         fontSize: 14,
                                         height: 1.3,
                                       ),

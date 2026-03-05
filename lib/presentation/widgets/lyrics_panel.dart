@@ -32,7 +32,7 @@ class LyricsPanel extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 15,
                 offset: const Offset(0, -5),
               ),
@@ -73,8 +73,8 @@ class LyricsPanel extends StatelessWidget {
                         const SizedBox(width: 4),
                         Icon(
                           Icons.keyboard_arrow_up,
-                          color: theme.textTheme.bodySmall?.color?.withOpacity(
-                            0.6,
+                          color: theme.textTheme.bodySmall?.color?.withValues(
+                            alpha: 0.6,
                           ),
                           size: 18,
                         ),
@@ -108,8 +108,8 @@ class LyricsPanel extends StatelessWidget {
                               : 'Chưa có lời bài hát.',
                           style: TextStyle(
                             color:
-                                theme.textTheme.bodyMedium?.color?.withOpacity(
-                                  0.85,
+                                theme.textTheme.bodyMedium?.color?.withValues(
+                                  alpha: 0.85,
                                 ) ??
                                 Colors.white70,
                             fontSize: 17,

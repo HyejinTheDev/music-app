@@ -10,6 +10,18 @@ class AuthRepository {
   /// Lấy user hiện tại
   User? get currentUser => _firebaseAuth.currentUser;
 
+  /// Lấy uid hiện tại (null-safe)
+  String? get currentUserId => _firebaseAuth.currentUser?.uid;
+
+  /// Lấy tên hiển thị
+  String? get currentUserDisplayName => _firebaseAuth.currentUser?.displayName;
+
+  /// Lấy photoURL
+  String? get currentUserPhotoUrl => _firebaseAuth.currentUser?.photoURL;
+
+  /// Lấy email
+  String? get currentUserEmail => _firebaseAuth.currentUser?.email;
+
   /// Kiểm tra email đã xác minh chưa
   bool get isEmailVerified => _firebaseAuth.currentUser?.emailVerified ?? false;
 

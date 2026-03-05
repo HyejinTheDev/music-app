@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/album_model.dart';
 import '../../data/repositories/album_repository.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../data/dataproviders/db_helper.dart';
 import 'album_event.dart';
 import 'album_state.dart';
@@ -10,8 +10,10 @@ import 'album_state.dart';
 /// Tách từ logic Firestore trực tiếp trong add_album_screen.dart
 class AlbumBloc extends Bloc<AlbumEvent, AlbumState> {
   final AlbumRepository albumRepository;
+  final AuthRepository authRepository;
 
-  AlbumBloc({required this.albumRepository}) : super(AlbumLoading()) {
+  AlbumBloc({required this.albumRepository, required this.authRepository})
+    : super(AlbumLoading()) {
     on<LoadAlbums>(_onLoadAlbums);
     on<CreateAlbum>(_onCreateAlbum);
     on<DeleteAlbum>(_onDeleteAlbum);
@@ -31,7 +33,7 @@ class AlbumBloc extends Bloc<AlbumEvent, AlbumState> {
     emit(AlbumLoading());
     try {
       final allSongs = await DatabaseHelper().getSongs();
-      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final currentUid = authRepository.currentUserId;
       final userSongs = allSongs
           .where((song) => song.userId == currentUid)
           .toList();
@@ -48,9 +50,11 @@ class AlbumBloc extends Bloc<AlbumEvent, AlbumState> {
   ) async {
     emit(AlbumCreating());
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final uid = authRepository.currentUserId;
+      final displayName = authRepository.currentUserDisplayName;
+      final email = authRepository.currentUserEmail;
       final artistName =
-          user?.displayName ?? user?.email?.split('@')[0] ?? 'Nghệ sĩ ẩn danh';
+          displayName ?? email?.split('@')[0] ?? 'Nghệ sĩ ẩn danh';
 
       // Nếu link ảnh trống, dùng ảnh mặc định
       final finalCoverUrl = event.coverUrl.isNotEmpty
@@ -60,7 +64,7 @@ class AlbumBloc extends Bloc<AlbumEvent, AlbumState> {
       final album = Album(
         title: event.title,
         artist: artistName,
-        userId: user?.uid,
+        userId: uid,
         coverUrl: finalCoverUrl,
         songIds: event.songIds,
       );

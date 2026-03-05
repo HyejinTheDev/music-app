@@ -129,7 +129,9 @@ class _PromoBannerState extends State<PromoBanner> {
         ),
         boxShadow: [
           BoxShadow(
-            color: darkenedColors.first.withOpacity(0.3), // Đổ bóng cũng dùng màu tối
+            color: darkenedColors.first.withValues(
+              alpha: 0.3,
+            ), // Đổ bóng cũng dùng màu tối
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -146,7 +148,9 @@ class _PromoBannerState extends State<PromoBanner> {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05), // Giảm độ nhạt của hình tròn trang trí
+                color: Colors.white.withValues(
+                  alpha: 0.05,
+                ), // Giảm độ nhạt của hình tròn trang trí
               ),
             ),
           ),
@@ -158,7 +162,9 @@ class _PromoBannerState extends State<PromoBanner> {
               height: 80,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05), // Giảm độ nhạt của hình tròn trang trí
+                color: Colors.white.withValues(
+                  alpha: 0.05,
+                ), // Giảm độ nhạt của hình tròn trang trí
               ),
             ),
           ),
@@ -186,7 +192,7 @@ class _PromoBannerState extends State<PromoBanner> {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontSize: 14,
                         ),
                       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/repositories/song_repository.dart';
+import '../../data/repositories/auth_repository.dart';
 import 'song_list_event.dart';
 import 'song_list_state.dart';
 
@@ -10,17 +10,20 @@ import 'song_list_state.dart';
 /// - SyncAndLoadSongs: sync cloud rồi load (user bấm ☁️ hoặc lần đầu mở app)
 class SongListBloc extends Bloc<SongListEvent, SongListState> {
   final SongRepository songRepository;
+  final AuthRepository authRepository;
 
-  SongListBloc({required this.songRepository}) : super(SongListInitial()) {
+  SongListBloc({required this.songRepository, required this.authRepository})
+    : super(SongListInitial()) {
     // Chỉ đọc local — không gọi cloud
     on<LoadSongs>((event, emit) async {
       emit(SongListLoading());
       try {
-        final user = FirebaseAuth.instance.currentUser;
+        final uid = authRepository.currentUserId;
+        final displayName = authRepository.currentUserDisplayName;
 
-         // Backfill uploaderName
-        if (user != null && user.displayName != null) {
-          await songRepository.updateUploaderName(user.uid, user.displayName!);
+        // Backfill uploaderName
+        if (uid != null && displayName != null) {
+          await songRepository.updateUploaderName(uid, displayName);
         }
 
         final songs = await songRepository.getLocalSongs();
@@ -34,9 +37,10 @@ class SongListBloc extends Bloc<SongListEvent, SongListState> {
     on<SyncAndLoadSongs>((event, emit) async {
       emit(SongListLoading());
       try {
-        final user = FirebaseAuth.instance.currentUser;
+        final uid = authRepository.currentUserId;
+        final displayName = authRepository.currentUserDisplayName;
 
-        if (user != null) {
+        if (uid != null) {
           // 1. Push local lên cloud trước
           try {
             debugPrint('[SyncAndLoad] 📤 Đẩy bài hát local lên cloud...');
@@ -57,8 +61,8 @@ class SongListBloc extends Bloc<SongListEvent, SongListState> {
         }
 
         // Backfill uploaderName
-        if (user != null && user.displayName != null) {
-          await songRepository.updateUploaderName(user.uid, user.displayName!);
+        if (uid != null && displayName != null) {
+          await songRepository.updateUploaderName(uid, displayName);
         }
 
         final songs = await songRepository.getLocalSongs();

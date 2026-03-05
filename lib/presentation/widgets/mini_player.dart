@@ -55,12 +55,12 @@ class MiniPlayer extends StatelessWidget {
           height: 70,
           margin: const EdgeInsets.only(bottom: 10, left: 10, right: 10),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor.withOpacity(0.98),
+            color: Theme.of(context).cardColor.withValues(alpha: 0.98),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Theme.of(context).dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
               ),

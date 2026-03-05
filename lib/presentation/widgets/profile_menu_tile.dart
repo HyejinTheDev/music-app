@@ -25,7 +25,7 @@ class ProfileMenuTile extends StatelessWidget {
         icon,
         color: isExit
             ? Colors.redAccent
-            : theme.iconTheme.color?.withOpacity(0.7),
+            : theme.iconTheme.color?.withValues(alpha: 0.7),
       ),
       title: Text(
         title,
@@ -59,7 +59,7 @@ class ContentManagementCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       child: Card(
-        color: Colors.tealAccent.withOpacity(0.1),
+        color: Colors.tealAccent.withValues(alpha: 0.1),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         child: ListTile(
           leading: Icon(leadingIcon, color: Colors.tealAccent),

@@ -61,8 +61,8 @@ class SettingsScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.tealAccent.withOpacity(0.15)
-                          : Colors.amber.withOpacity(0.15),
+                          ? Colors.tealAccent.withValues(alpha: 0.15)
+                          : Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -166,7 +166,7 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.tealAccent.withOpacity(0.15)
+              ? Colors.tealAccent.withValues(alpha: 0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),

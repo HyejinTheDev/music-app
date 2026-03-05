@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/song_repository.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
@@ -9,10 +9,11 @@ import 'profile_state.dart';
 /// Lưu profile riêng mỗi user trong Firestore: users/{uid}
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final SongRepository songRepository;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthRepository authRepository;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  ProfileBloc({required this.songRepository}) : super(ProfileInitial()) {
+  ProfileBloc({required this.songRepository, required this.authRepository})
+    : super(ProfileInitial()) {
     on<LoadProfile>(_onLoadProfile);
     on<UpdateDisplayName>(_onUpdateDisplayName);
     on<UpdateProfile>(_onUpdateProfile);
@@ -25,7 +26,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   /// Tải thông tin profile từ Firestore
   /// Nếu chưa có document → tạo mới từ Firebase Auth data
   void _onLoadProfile(LoadProfile event, Emitter<ProfileState> emit) async {
-    final user = _auth.currentUser;
+    final user = authRepository.currentUser;
     if (user == null) {
       emit(ProfileError('Chưa đăng nhập'));
       return;
@@ -86,7 +87,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     UpdateDisplayName event,
     Emitter<ProfileState> emit,
   ) async {
-    final user = _auth.currentUser;
+    final user = authRepository.currentUser;
     if (user == null) {
       emit(ProfileError('Chưa đăng nhập'));
       return;
@@ -115,7 +116,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
 
   /// Cập nhật profile: tên + ảnh trên Firestore
   void _onUpdateProfile(UpdateProfile event, Emitter<ProfileState> emit) async {
-    final user = _auth.currentUser;
+    final user = authRepository.currentUser;
     if (user == null) {
       emit(ProfileError('Chưa đăng nhập'));
       return;

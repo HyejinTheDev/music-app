@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/notification_model.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/services/local_notification_service.dart';
 import 'notification_event.dart';
@@ -14,6 +14,7 @@ import 'notification_state.dart';
 /// Gửi cả thông báo in-app và local push notification cho điện thoại
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final NotificationRepository notificationRepository;
+  final AuthRepository authRepository;
   final List<NotificationModel> _notifications = [];
   StreamSubscription? _notifSub;
   int _notifIdCounter = 0;
@@ -24,8 +25,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   /// Set lưu các notifId đã xử lý (tránh push trùng)
   final Set<String> _processedNotifIds = {};
 
-  NotificationBloc({required this.notificationRepository})
-    : super(NotificationInitial()) {
+  NotificationBloc({
+    required this.notificationRepository,
+    required this.authRepository,
+  }) : super(NotificationInitial()) {
     on<LoadNotifications>(_onLoad);
     on<AddNotification>(_onAdd);
     on<MarkAsRead>(_onMarkAsRead);
@@ -54,7 +57,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       emit(NotificationLoaded(notifications: List.from(_notifications)));
 
       // Cập nhật trên Firestore
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = authRepository.currentUserId;
       if (uid != null) {
         notificationRepository.markAsRead(uid, event.notificationId);
       }
@@ -73,7 +76,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(NotificationLoaded(notifications: List.from(_notifications)));
 
     // Cập nhật trên Firestore
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = authRepository.currentUserId;
     if (uid != null) {
       notificationRepository.markAllAsRead(uid);
     }
@@ -85,7 +88,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     StartListeningNotifications event,
     Emitter<NotificationState> emit,
   ) {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final currentUserId = authRepository.currentUserId;
     if (currentUserId == null) return;
 
     // Trừ 30 giây để tránh bỏ lỡ notification do lệch đồng hồ giữa 2 thiết bị

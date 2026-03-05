@@ -4,7 +4,6 @@ import '../../data/repositories/auth_repository.dart';
 import 'forgot_password_event.dart';
 import 'forgot_password_state.dart';
 
-/// BLoC quản lý chức năng quên mật khẩu
 class ForgotPasswordBloc
     extends Bloc<ForgotPasswordEvent, ForgotPasswordState> {
   final AuthRepository authRepository;

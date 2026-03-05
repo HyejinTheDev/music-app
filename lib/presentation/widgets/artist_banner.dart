@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/artist_profile.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../logic/follow/follow_bloc.dart';
 import '../../logic/follow/follow_event.dart';
 import '../../logic/follow/follow_state.dart';
@@ -19,7 +19,7 @@ class ArtistBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final currentUserId = context.read<AuthRepository>().currentUserId;
 
     if (artists.isEmpty) {
       return const SizedBox(height: 140);

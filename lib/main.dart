@@ -89,9 +89,10 @@ class MyApp extends StatelessWidget {
         providers: [
           // Song BLoCs
           BlocProvider<SongListBloc>(
-            create: (context) =>
-                SongListBloc(songRepository: context.read<SongRepository>())
-                  ..add(SyncAndLoadSongs()),
+            create: (context) => SongListBloc(
+              songRepository: context.read<SongRepository>(),
+              authRepository: context.read<AuthRepository>(),
+            )..add(SyncAndLoadSongs()),
           ),
           BlocProvider<SongBloc>(
             create: (context) => SongBloc(
@@ -132,8 +133,10 @@ class MyApp extends StatelessWidget {
 
           // Album
           BlocProvider<AlbumBloc>(
-            create: (context) =>
-                AlbumBloc(albumRepository: context.read<AlbumRepository>()),
+            create: (context) => AlbumBloc(
+              albumRepository: context.read<AlbumRepository>(),
+              authRepository: context.read<AuthRepository>(),
+            ),
           ),
 
           // Banner
@@ -143,9 +146,10 @@ class MyApp extends StatelessWidget {
 
           // Profile
           BlocProvider<ProfileBloc>(
-            create: (context) =>
-                ProfileBloc(songRepository: context.read<SongRepository>())
-                  ..add(LoadProfile()),
+            create: (context) => ProfileBloc(
+              songRepository: context.read<SongRepository>(),
+              authRepository: context.read<AuthRepository>(),
+            )..add(LoadProfile()),
           ),
 
           // Settings — persist vào SharedPreferences
@@ -157,6 +161,7 @@ class MyApp extends StatelessWidget {
                 NotificationBloc(
                     notificationRepository: context
                         .read<NotificationRepository>(),
+                    authRepository: context.read<AuthRepository>(),
                   )
                   ..add(LoadNotifications())
                   ..add(StartListeningNotifications()),
@@ -164,9 +169,10 @@ class MyApp extends StatelessWidget {
 
           // Follow — dùng FollowRepository (MVVM)
           BlocProvider<FollowBloc>(
-            create: (context) =>
-                FollowBloc(followRepository: context.read<FollowRepository>())
-                  ..add(LoadFollowing()),
+            create: (context) => FollowBloc(
+              followRepository: context.read<FollowRepository>(),
+              authRepository: context.read<AuthRepository>(),
+            )..add(LoadFollowing()),
           ),
         ],
 

@@ -36,7 +36,7 @@ class FeedScreen extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: Colors.tealAccent.withOpacity(0.8),
+              backgroundColor: Colors.tealAccent.withValues(alpha: 0.8),
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
             ),

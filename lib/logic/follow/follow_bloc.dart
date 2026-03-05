@@ -1,5 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/follow_repository.dart';
 import 'follow_event.dart';
 import 'follow_state.dart';
@@ -8,9 +8,11 @@ import 'follow_state.dart';
 /// Delegate tất cả Firestore calls sang FollowRepository (MVVM)
 class FollowBloc extends Bloc<FollowEvent, FollowState> {
   final FollowRepository followRepository;
+  final AuthRepository authRepository;
   final Set<String> _followingIds = {};
 
-  FollowBloc({required this.followRepository}) : super(FollowInitial()) {
+  FollowBloc({required this.followRepository, required this.authRepository})
+    : super(FollowInitial()) {
     on<LoadFollowing>(_onLoad);
     on<ToggleFollow>(_onToggle);
   }
@@ -18,7 +20,7 @@ class FollowBloc extends Bloc<FollowEvent, FollowState> {
   Future<void> _onLoad(LoadFollowing event, Emitter<FollowState> emit) async {
     emit(FollowLoading());
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = authRepository.currentUserId;
       if (uid == null) {
         emit(const FollowLoaded(followingIds: {}));
         return;
@@ -36,11 +38,10 @@ class FollowBloc extends Bloc<FollowEvent, FollowState> {
 
   Future<void> _onToggle(ToggleFollow event, Emitter<FollowState> emit) async {
     try {
-      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      final currentUid = authRepository.currentUserId;
       if (currentUid == null) return;
 
-      final followerName =
-          FirebaseAuth.instance.currentUser?.displayName ?? 'Ẩn danh';
+      final followerName = authRepository.currentUserDisplayName ?? 'Ẩn danh';
 
       if (_followingIds.contains(event.artistUserId)) {
         // Bỏ theo dõi

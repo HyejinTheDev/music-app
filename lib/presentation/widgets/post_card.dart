@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
+import '../../data/repositories/auth_repository.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../data/models/song_model.dart';
 import '../../logic/feed/feed_bloc.dart';
@@ -45,7 +45,7 @@ class PostCard extends StatelessWidget {
     final likes = data['likes'] ?? 0;
     final comments = data['comments'] ?? 0;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final user = context.read<AuthRepository>().currentUser;
     final likedBy = List<String>.from(data['likedBy'] ?? []);
     final isLiked = user != null && likedBy.contains(user.uid);
 
@@ -88,7 +88,7 @@ class PostCard extends StatelessWidget {
             child: Text(
               data['caption'] ?? '',
               style: TextStyle(
-                color: theme.textTheme.bodyLarge?.color?.withOpacity(0.9),
+                color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.9),
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -217,7 +217,9 @@ class PostCard extends StatelessWidget {
                         content: Text(
                           "Đã lưu \"${sharedSong.title}\" vào playlist!",
                         ),
-                        backgroundColor: Colors.tealAccent.withOpacity(0.8),
+                        backgroundColor: Colors.tealAccent.withValues(
+                          alpha: 0.8,
+                        ),
                         behavior: SnackBarBehavior.floating,
                         duration: const Duration(seconds: 2),
                       ),

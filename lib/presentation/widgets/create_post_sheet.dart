@@ -118,10 +118,10 @@ void showCreatePostSheet(
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.tealAccent.withOpacity(0.1),
+                        color: Colors.tealAccent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.tealAccent.withOpacity(0.3),
+                          color: Colors.tealAccent.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(

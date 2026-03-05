@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../data/repositories/auth_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 // --- Imports Logic ---
@@ -46,7 +46,7 @@ void showSongOptionsMenu({
   final playerState = playerBloc.state;
   final player = playerBloc.player;
   final currentSong = playerState.currentSong;
-  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  final currentUserId = context.read<AuthRepository>().currentUserId;
 
   showModalBottomSheet(
     context: context,
@@ -222,7 +222,7 @@ void showSongOptionsMenu({
 
                   // --- CHỈ HIỆN SỬA/XÓA KHI LÀ CHỦ BÀI HÁT ---
                   if (song.userId != null &&
-                      FirebaseAuth.instance.currentUser?.uid ==
+                      context.read<AuthRepository>().currentUserId ==
                           song.userId) ...[
                     const Divider(color: Colors.white10),
                     const Padding(
