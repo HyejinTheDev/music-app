@@ -21,7 +21,7 @@ class _PromoBannerState extends State<PromoBanner> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _pageController = PageController(viewportFraction: 0.9);
     _startAutoSlide();
   }
 
@@ -53,11 +53,11 @@ class _PromoBannerState extends State<PromoBanner> {
       builder: (context, state) {
         if (state is BannerLoading) {
           return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            height: 180,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            height: 160,
             decoration: BoxDecoration(
               color: Colors.grey[900],
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: const Center(
               child: CircularProgressIndicator(color: Colors.tealAccent),
@@ -69,13 +69,11 @@ class _PromoBannerState extends State<PromoBanner> {
           return Column(
             children: [
               SizedBox(
-                height: 180,
+                height: 160,
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: state.banners.length,
-                  onPageChanged: (index) {
-                    if (state.currentIndex != index) {}
-                  },
+                  onPageChanged: (index) {},
                   itemBuilder: (context, index) {
                     return _buildBannerCard(state.banners[index]);
                   },
@@ -89,11 +87,11 @@ class _PromoBannerState extends State<PromoBanner> {
                   state.banners.length,
                   (index) => AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: state.currentIndex == index ? 24 : 8,
-                    height: 8,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: state.currentIndex == index ? 20 : 6,
+                    height: 6,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(3),
                       color: state.currentIndex == index
                           ? Colors.tealAccent
                           : Colors.grey[700],
@@ -111,100 +109,74 @@ class _PromoBannerState extends State<PromoBanner> {
   }
 
   Widget _buildBannerCard(BannerItem banner) {
-    // --- THÊM PHẦN NÀY ĐỂ LÀM TỐI MÀU ---
-    // Pha trộn mỗi màu gốc với 50% màu đen (số 0.5).
-    // Bạn có thể tăng lên 0.6 hoặc 0.7 nếu muốn nó tối hơn nữa.
     final List<Color> darkenedColors = banner.gradientColors.map((color) {
-      return Color.lerp(color, Colors.black, 0.5) ?? color;
+      return Color.lerp(color, Colors.black, 0.45) ?? color;
     }).toList();
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: darkenedColors, // Dùng mảng màu đã làm tối
+          colors: darkenedColors,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: darkenedColors.first.withValues(
-              alpha: 0.3,
-            ), // Đổ bóng cũng dùng màu tối
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
-      child: Stack(
-        children: [
-          // Decorative circles
-          Positioned(
-            right: -20,
-            top: -20,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(
-                  alpha: 0.05,
-                ), // Giảm độ nhạt của hình tròn trang trí
-              ),
-            ),
-          ),
-          Positioned(
-            right: 30,
-            bottom: -30,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(
-                  alpha: 0.05,
-                ), // Giảm độ nhạt của hình tròn trang trí
-              ),
-            ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        banner.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        banner.subtitle,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    banner.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Icon(banner.icon, color: Colors.white70, size: 60),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    banner.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Nút CTA
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      banner.buttonText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Icon(banner.icon, color: Colors.white38, size: 48),
+          ],
+        ),
       ),
     );
   }

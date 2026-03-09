@@ -12,7 +12,6 @@ class BannerBloc extends Bloc<BannerEvent, BannerState> {
     on<PreviousBanner>(_onPreviousBanner);
   }
 
-  /// Danh sách banner mặc định — có thể thay bằng dữ liệu từ server sau
   static const List<BannerItem> _defaultBanners = [
     BannerItem(
       title: "\u{1F3B5} Khám phá ngay!",

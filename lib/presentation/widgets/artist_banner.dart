@@ -7,8 +7,6 @@ import '../../logic/follow/follow_event.dart';
 import '../../logic/follow/follow_state.dart';
 
 /// Banner danh sách nghệ sĩ nổi bật (scroll ngang)
-/// Hiển thị tài khoản người dùng duy nhất (nhóm theo userId)
-/// Có nút theo dõi / bỏ theo dõi
 class ArtistBanner extends StatelessWidget {
   final List<ArtistProfile> artists;
   final Function(ArtistProfile) onTap;
@@ -22,11 +20,11 @@ class ArtistBanner extends StatelessWidget {
     final currentUserId = context.read<AuthRepository>().currentUserId;
 
     if (artists.isEmpty) {
-      return const SizedBox(height: 140);
+      return const SizedBox(height: 120);
     }
 
     return SizedBox(
-      height: 140,
+      height: 120,
       child: BlocBuilder<FollowBloc, FollowState>(
         builder: (context, followState) {
           return ListView.builder(
@@ -41,47 +39,52 @@ class ArtistBanner extends StatelessWidget {
               return GestureDetector(
                 onTap: () => onTap(artist),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  margin: const EdgeInsets.symmetric(horizontal: 6),
                   width: 80,
                   child: Column(
                     children: [
-                      // Avatar
-                      Hero(
-                        tag: 'artist_avatar_${artist.userId}',
-                        child: Container(
-                          width: 65,
-                          height: 65,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            image: artist.avatarUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(artist.avatarUrl!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                            border: Border.all(
-                              color: isFollowing
-                                  ? Colors.tealAccent
-                                  : (theme.brightness == Brightness.dark
-                                        ? Colors.white24
-                                        : Colors.grey.shade300),
-                              width: isFollowing ? 2.5 : 2,
-                            ),
-                          ),
-                          child: artist.avatarUrl == null
-                              ? Icon(
-                                  Icons.person,
-                                  size: 32,
-                                  color: theme.brightness == Brightness.dark
-                                      ? Colors.white24
-                                      : Colors.grey.shade400,
+                      // Avatar với viền gradient
+                      Container(
+                        padding: const EdgeInsets.all(2.5),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: isFollowing
+                              ? const LinearGradient(
+                                  colors: [Colors.tealAccent, Colors.teal],
                                 )
                               : null,
+                          border: !isFollowing
+                              ? Border.all(
+                                  color: theme.brightness == Brightness.dark
+                                      ? Colors.white24
+                                      : Colors.grey.shade300,
+                                  width: 2,
+                                )
+                              : null,
+                        ),
+                        child: Hero(
+                          tag: 'artist_avatar_${artist.userId}',
+                          child: CircleAvatar(
+                            radius: 28,
+                            backgroundColor: Colors.grey[800],
+                            backgroundImage: artist.avatarUrl != null
+                                ? NetworkImage(artist.avatarUrl!)
+                                : null,
+                            child: artist.avatarUrl == null
+                                ? Icon(
+                                    Icons.person,
+                                    size: 28,
+                                    color: theme.brightness == Brightness.dark
+                                        ? Colors.white24
+                                        : Colors.grey.shade400,
+                                  )
+                                : null,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),
 
-                      // Tên nghệ sĩ
+                      // Tên
                       Text(
                         artist.displayName,
                         maxLines: 1,
@@ -94,9 +97,9 @@ class ArtistBanner extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
 
-                      // Nút Theo dõi / Đang theo dõi (không hiện cho chính mình)
+                      // Nút theo dõi
                       if (!isMe)
                         GestureDetector(
                           onTap: () {
@@ -116,10 +119,10 @@ class ArtistBanner extends StatelessWidget {
                               color: isFollowing
                                   ? Colors.transparent
                                   : Colors.tealAccent,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               border: isFollowing
                                   ? Border.all(
-                                      color: Colors.grey.shade500,
+                                      color: Colors.grey.shade600,
                                       width: 1,
                                     )
                                   : null,
