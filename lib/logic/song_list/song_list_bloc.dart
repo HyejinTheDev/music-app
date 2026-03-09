@@ -19,7 +19,9 @@ class SongListBloc extends Bloc<SongListEvent, SongListState> {
       emit(SongListLoading());
       try {
         final uid = authRepository.currentUserId;
-        final displayName = authRepository.currentUserDisplayName;
+        final displayName =
+            authRepository.currentUserDisplayName ??
+            authRepository.currentUserEmail?.split('@').first;
 
         // Backfill uploaderName
         if (uid != null && displayName != null) {
@@ -38,7 +40,9 @@ class SongListBloc extends Bloc<SongListEvent, SongListState> {
       emit(SongListLoading());
       try {
         final uid = authRepository.currentUserId;
-        final displayName = authRepository.currentUserDisplayName;
+        final displayName =
+            authRepository.currentUserDisplayName ??
+            authRepository.currentUserEmail?.split('@').first;
 
         if (uid != null) {
           // 1. Push local lên cloud trước

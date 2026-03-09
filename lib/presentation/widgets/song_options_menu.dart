@@ -262,6 +262,9 @@ void showSongOptionsMenu({
                         style: TextStyle(color: Colors.redAccent),
                       ),
                       onTap: () {
+                        // Lưu BLoC references TRƯỚC khi đóng bottom sheet
+                        final songBloc = context.read<SongBloc>();
+                        final songListBloc = context.read<SongListBloc>();
                         Navigator.pop(context);
                         showDialog(
                           context: context,
@@ -278,10 +281,8 @@ void showSongOptionsMenu({
                               TextButton(
                                 onPressed: () {
                                   Navigator.pop(ctx);
-                                  context.read<SongBloc>().add(
-                                    DeleteSongEvent(song.id!),
-                                  );
-                                  context.read<SongListBloc>().add(LoadSongs());
+                                  songBloc.add(DeleteSongEvent(song.id!));
+                                  songListBloc.add(LoadSongs());
                                   if (currentSong?.id == song.id) {
                                     player.stop();
                                     playerBloc.add(StopRequested());

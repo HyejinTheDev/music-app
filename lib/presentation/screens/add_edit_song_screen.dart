@@ -52,28 +52,41 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final coverUrl = _coverUrlController.text.trim();
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    // Fallback: nếu displayName null → dùng phần trước @ của email
+    final fallbackName =
+        currentUser?.displayName ??
+        currentUser?.email?.split('@').first ??
+        'Người dùng';
+
     final song = Song(
       id: widget.song?.id,
       title: _titleController.text,
       artist: _artistController.text,
       lyrics: _lyricsController.text,
       audioUrl: _audioUrlController.text,
-      userId: widget.song?.userId ?? FirebaseAuth.instance.currentUser?.uid,
-      uploaderName:
-          widget.song?.uploaderName ??
-          FirebaseAuth.instance.currentUser?.displayName,
+      userId: widget.song?.userId ?? currentUser?.uid,
+      uploaderName: widget.song?.uploaderName ?? fallbackName,
       coverImageUrl: coverUrl.isNotEmpty ? coverUrl : null,
     );
 
     final isEditing = widget.song != null;
+    final songBloc = context.read<SongBloc>();
+    final songListBloc = context.read<SongListBloc>();
+
     if (isEditing) {
-      context.read<SongBloc>().add(UpdateSongEvent(song));
+      songBloc.add(UpdateSongEvent(song));
     } else {
-      context.read<SongBloc>().add(AddSongEvent(song));
+      songBloc.add(AddSongEvent(song));
     }
 
-    context.read<SongListBloc>().add(sle.LoadSongs());
     Navigator.pop(context);
+
+    // Đợi SongBloc xử lý xong insert/update rồi mới reload danh sách
+    Future.delayed(const Duration(milliseconds: 500), () {
+      songListBloc.add(sle.LoadSongs());
+    });
   }
 
   @override

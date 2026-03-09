@@ -67,9 +67,9 @@ class Song extends Equatable {
   factory Song.fromMap(Map<String, dynamic> map) {
     return Song(
       id: map['id'],
-      title: map['title'],
-      artist: map['artist'],
-      lyrics: map['lyrics'],
+      title: map['title'] ?? '',
+      artist: map['artist'] ?? '',
+      lyrics: map['lyrics'] ?? '',
       audioUrl: map['audio_url'] ?? '',
       userId: map['user_id'],
       uploaderName: map['uploader_name'],

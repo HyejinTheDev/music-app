@@ -21,11 +21,20 @@ class SongRepository {
   Future<int> updateSong(Song song) => _dbHelper.updateSong(song);
   Future<int> deleteSong(int id) => _dbHelper.deleteSong(id);
 
+  /// Xóa bài hát khỏi Firebase Realtime Database
+  Future<void> deleteFromCloud(int id) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await _firebaseRef.child(user.uid).child(id.toString()).remove();
+    debugPrint('[DeleteFromCloud] ✅ Đã xóa bài hát id=$id khỏi cloud');
+  }
+
   // ========================
   // CLOUD SYNC
   // ========================
 
-  /// Sync tất cả bài hát local lên Firebase Realtime Database
+  /// Sync bài hát CỦA USER HIỆN TẠI lên Firebase Realtime Database
+  /// Chỉ push bài hát có user_id trùng với UID hiện tại
   Future<void> syncToCloud() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -35,16 +44,24 @@ class SongRepository {
       }
 
       List<Song> localSongs = await _dbHelper.getSongs();
+
+      // Chỉ push bài hát của CHÍNH user hiện tại
+      final mySongs = localSongs.where((s) => s.userId == user.uid).toList();
       debugPrint(
-        '[SyncToCloud] 📤 Đang sync ${localSongs.length} bài hát lên cloud...',
+        '[SyncToCloud] 📤 Đang sync ${mySongs.length}/${localSongs.length} bài hát (của mình) lên cloud...',
       );
 
-      if (localSongs.isEmpty) {
-        debugPrint('[SyncToCloud] ⚠️ Không có bài hát local nào để sync');
+      // ★ LUÔN xóa node cũ trên Firebase TRƯỚC (kể cả khi không còn bài nào)
+      await _firebaseRef.child(user.uid).remove();
+
+      if (mySongs.isEmpty) {
+        debugPrint(
+          '[SyncToCloud] ⚠️ Không có bài hát nào của mình để sync — đã xóa sạch trên cloud',
+        );
         return;
       }
 
-      for (var song in localSongs) {
+      for (var song in mySongs) {
         if (song.id != null) {
           final songData = song.toMap();
           debugPrint(
@@ -57,9 +74,7 @@ class SongRepository {
         }
       }
 
-      debugPrint(
-        '[SyncToCloud] ✅ Sync thành công ${localSongs.length} bài hát!',
-      );
+      debugPrint('[SyncToCloud] ✅ Sync thành công ${mySongs.length} bài hát!');
     } catch (e, stackTrace) {
       debugPrint('[SyncToCloud] ❌ LỖI: $e');
       debugPrint('[SyncToCloud] StackTrace: $stackTrace');
@@ -100,6 +115,22 @@ class SongRepository {
                 final songData = Map<String, dynamic>.from(
                   songsMap[songId] as Map,
                 );
+
+                // ★ Xóa 'id' gốc để SQLite tự gán ID mới (tránh xung đột)
+                songData.remove('id');
+
+                // ★ Đảm bảo user_id luôn được set từ path Firebase
+                songData['user_id'] ??= userId;
+
+                // ★ Bỏ qua bài hát bị nhân bản (user_id trong data ≠ userId trên path)
+                // Đây là rác từ bug syncToCloud cũ đã push tất cả bài dưới mọi user
+                if (songData['user_id'] != userId) {
+                  debugPrint(
+                    '[SyncFromCloud] 🗑️ Bỏ qua bản sao rác: $songId (user_id=${songData['user_id']} ≠ path=$userId)',
+                  );
+                  continue;
+                }
+
                 final song = Song.fromMap(songData);
                 await _dbHelper.insertSong(song);
                 count++;

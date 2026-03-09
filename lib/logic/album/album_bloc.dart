@@ -16,6 +16,7 @@ class AlbumBloc extends Bloc<AlbumEvent, AlbumState> {
     : super(AlbumLoading()) {
     on<LoadAlbums>(_onLoadAlbums);
     on<CreateAlbum>(_onCreateAlbum);
+    on<UpdateAlbum>(_onUpdateAlbum);
     on<DeleteAlbum>(_onDeleteAlbum);
     on<LoadUserSongs>(_onLoadUserSongs);
   }
@@ -74,6 +75,40 @@ class AlbumBloc extends Bloc<AlbumEvent, AlbumState> {
       emit(AlbumReady());
     } catch (e) {
       emit(AlbumError("Lỗi tạo Album: $e"));
+      emit(AlbumReady());
+    }
+  }
+
+  /// Cập nhật album
+  Future<void> _onUpdateAlbum(
+    UpdateAlbum event,
+    Emitter<AlbumState> emit,
+  ) async {
+    emit(AlbumCreating());
+    try {
+      final uid = authRepository.currentUserId;
+      final displayName = authRepository.currentUserDisplayName;
+      final email = authRepository.currentUserEmail;
+      final artistName =
+          displayName ?? email?.split('@')[0] ?? 'Nghệ sĩ ẩn danh';
+
+      final finalCoverUrl = event.coverUrl.isNotEmpty
+          ? event.coverUrl
+          : Album.defaultCoverUrl;
+
+      final album = Album(
+        title: event.title,
+        artist: artistName,
+        userId: uid,
+        coverUrl: finalCoverUrl,
+        songIds: event.songIds,
+      );
+
+      await albumRepository.updateAlbum(event.docId, album);
+      emit(AlbumCreateSuccess("Đã cập nhật Album thành công!"));
+      emit(AlbumReady());
+    } catch (e) {
+      emit(AlbumError("Lỗi cập nhật Album: $e"));
       emit(AlbumReady());
     }
   }

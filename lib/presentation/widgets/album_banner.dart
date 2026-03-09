@@ -45,6 +45,8 @@ class AlbumBanner extends StatelessWidget {
               return GestureDetector(
                 onTap: () {
                   final songIds = List<String>.from(albumData['songIds'] ?? []);
+                  final docId = albums[index].id;
+                  final userId = albumData['userId'] as String?;
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -53,6 +55,8 @@ class AlbumBanner extends StatelessWidget {
                         albumArtist: artist,
                         albumCoverUrl: coverUrl,
                         songIds: songIds,
+                        albumDocId: docId,
+                        albumUserId: userId,
                       ),
                     ),
                   );

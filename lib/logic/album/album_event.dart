@@ -26,5 +26,20 @@ class DeleteAlbum extends AlbumEvent {
   DeleteAlbum(this.docId);
 }
 
+/// Cập nhật album
+class UpdateAlbum extends AlbumEvent {
+  final String docId;
+  final String title;
+  final String coverUrl;
+  final List<String> songIds;
+
+  UpdateAlbum({
+    required this.docId,
+    required this.title,
+    required this.coverUrl,
+    required this.songIds,
+  });
+}
+
 /// Tải danh sách bài hát của user từ local DB (cho màn tạo album)
 class LoadUserSongs extends AlbumEvent {}

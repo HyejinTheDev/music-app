@@ -6,7 +6,19 @@ import '../../logic/album/album_event.dart';
 import '../../logic/album/album_state.dart';
 
 class AddAlbumScreen extends StatefulWidget {
-  const AddAlbumScreen({Key? key}) : super(key: key);
+  /// Nếu có editDocId → chế độ sửa album
+  final String? editDocId;
+  final String? editTitle;
+  final String? editCoverUrl;
+  final List<String>? editSongIds;
+
+  const AddAlbumScreen({
+    Key? key,
+    this.editDocId,
+    this.editTitle,
+    this.editCoverUrl,
+    this.editSongIds,
+  }) : super(key: key);
 
   @override
   State<AddAlbumScreen> createState() => _AddAlbumScreenState();
@@ -17,14 +29,23 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
   final _coverUrlController = TextEditingController();
   final List<String> _selectedSongIds = [];
 
+  bool get _isEditing => widget.editDocId != null;
+
   @override
   void initState() {
     super.initState();
-    // Dùng AlbumBloc thay vì gọi DatabaseHelper trực tiếp
+
+    // Nếu đang sửa → điền dữ liệu cũ
+    if (_isEditing) {
+      _titleController.text = widget.editTitle ?? '';
+      _coverUrlController.text = widget.editCoverUrl ?? '';
+      _selectedSongIds.addAll(widget.editSongIds ?? []);
+    }
+
     context.read<AlbumBloc>().add(LoadUserSongs());
   }
 
-  void _createAlbum() {
+  void _saveAlbum() {
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -38,13 +59,24 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
       return;
     }
 
-    context.read<AlbumBloc>().add(
-      CreateAlbum(
-        title: _titleController.text.trim(),
-        coverUrl: _coverUrlController.text.trim(),
-        songIds: List.from(_selectedSongIds),
-      ),
-    );
+    if (_isEditing) {
+      context.read<AlbumBloc>().add(
+        UpdateAlbum(
+          docId: widget.editDocId!,
+          title: _titleController.text.trim(),
+          coverUrl: _coverUrlController.text.trim(),
+          songIds: List.from(_selectedSongIds),
+        ),
+      );
+    } else {
+      context.read<AlbumBloc>().add(
+        CreateAlbum(
+          title: _titleController.text.trim(),
+          coverUrl: _coverUrlController.text.trim(),
+          songIds: List.from(_selectedSongIds),
+        ),
+      );
+    }
   }
 
   @override
@@ -79,9 +111,9 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text(
-            "Tạo Album Mới",
-            style: TextStyle(color: Colors.white),
+          title: Text(
+            _isEditing ? "Sửa Album" : "Tạo Album Mới",
+            style: const TextStyle(color: Colors.white),
           ),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
@@ -137,7 +169,7 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
               ),
               const SizedBox(height: 30),
 
-              // 3. Danh sách nhạc — dùng BLoC thay vì gọi DB trực tiếp
+              // 3. Danh sách nhạc
               const Text(
                 "Chọn bài hát đưa vào Album:",
                 style: TextStyle(
@@ -196,7 +228,7 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 4. Nút TẠO ALBUM — dùng BlocBuilder cho trạng thái loading
+              // 4. Nút LƯU
               BlocBuilder<AlbumBloc, AlbumState>(
                 builder: (context, state) {
                   final isCreating = state is AlbumCreating;
@@ -211,12 +243,12 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: isCreating ? null : _createAlbum,
+                      onPressed: isCreating ? null : _saveAlbum,
                       child: isCreating
                           ? const CircularProgressIndicator(color: Colors.black)
-                          : const Text(
-                              "TẠO ALBUM",
-                              style: TextStyle(
+                          : Text(
+                              _isEditing ? "CẬP NHẬT ALBUM" : "TẠO ALBUM",
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),

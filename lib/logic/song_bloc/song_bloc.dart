@@ -74,6 +74,8 @@ class SongBloc extends Bloc<SongEvent, SongState> {
         await songRepository.deleteSong(event.id);
         add(LoadSongs());
 
+        // Sync lại toàn bộ lên cloud (xóa node cũ + push lại bài còn lại)
+        // Dùng syncToCloud thay vì deleteFromCloud vì local ID có thể khác Firebase key
         try {
           await songRepository.syncToCloud();
         } catch (_) {}
