@@ -46,35 +46,38 @@ class ArtistBanner extends StatelessWidget {
                   child: Column(
                     children: [
                       // Avatar
-                      Container(
-                        width: 65,
-                        height: 65,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          image: artist.avatarUrl != null
-                              ? DecorationImage(
-                                  image: NetworkImage(artist.avatarUrl!),
-                                  fit: BoxFit.cover,
+                      Hero(
+                        tag: 'artist_avatar_${artist.userId}',
+                        child: Container(
+                          width: 65,
+                          height: 65,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            image: artist.avatarUrl != null
+                                ? DecorationImage(
+                                    image: NetworkImage(artist.avatarUrl!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                            border: Border.all(
+                              color: isFollowing
+                                  ? Colors.tealAccent
+                                  : (theme.brightness == Brightness.dark
+                                        ? Colors.white24
+                                        : Colors.grey.shade300),
+                              width: isFollowing ? 2.5 : 2,
+                            ),
+                          ),
+                          child: artist.avatarUrl == null
+                              ? Icon(
+                                  Icons.person,
+                                  size: 32,
+                                  color: theme.brightness == Brightness.dark
+                                      ? Colors.white24
+                                      : Colors.grey.shade400,
                                 )
                               : null,
-                          border: Border.all(
-                            color: isFollowing
-                                ? Colors.tealAccent
-                                : (theme.brightness == Brightness.dark
-                                      ? Colors.white24
-                                      : Colors.grey.shade300),
-                            width: isFollowing ? 2.5 : 2,
-                          ),
                         ),
-                        child: artist.avatarUrl == null
-                            ? Icon(
-                                Icons.person,
-                                size: 32,
-                                color: theme.brightness == Brightness.dark
-                                    ? Colors.white24
-                                    : Colors.grey.shade400,
-                              )
-                            : null,
                       ),
                       const SizedBox(height: 6),
 

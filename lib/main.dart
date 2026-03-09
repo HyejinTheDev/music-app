@@ -12,6 +12,7 @@ import 'data/repositories/album_repository.dart';
 import 'data/repositories/notification_repository.dart';
 import 'data/repositories/follow_repository.dart';
 import 'data/repositories/auth_repository.dart';
+import 'presentation/widgets/page_transitions.dart';
 
 // --- Data Providers ---
 import 'data/dataproviders/db_helper.dart';
@@ -232,6 +233,13 @@ class MyApp extends StatelessWidget {
         seedColor: Colors.teal,
         brightness: Brightness.light,
       ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: SlideUpFadeTransitionBuilder(),
+          TargetPlatform.iOS: SlideUpFadeTransitionBuilder(),
+          TargetPlatform.windows: SlideUpFadeTransitionBuilder(),
+        },
+      ),
     );
   }
 
@@ -256,6 +264,13 @@ class MyApp extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(
         seedColor: Colors.teal,
         brightness: Brightness.dark,
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: SlideUpFadeTransitionBuilder(),
+          TargetPlatform.iOS: SlideUpFadeTransitionBuilder(),
+          TargetPlatform.windows: SlideUpFadeTransitionBuilder(),
+        },
       ),
     );
   }

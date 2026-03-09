@@ -114,36 +114,39 @@ class _ArtistProfileView extends StatelessWidget {
                   const SizedBox(height: 10),
 
                   // Avatar nghệ sĩ
-                  Container(
-                    width: 110,
-                    height: 110,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.tealAccent.withValues(alpha: 0.6),
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.tealAccent.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          spreadRadius: 2,
+                  Hero(
+                    tag: 'artist_avatar_${artist.userId}',
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.tealAccent.withValues(alpha: 0.6),
+                          width: 3,
                         ),
-                      ],
-                      image: artist.avatarUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(artist.avatarUrl!),
-                              fit: BoxFit.cover,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.tealAccent.withValues(alpha: 0.25),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                        image: artist.avatarUrl != null
+                            ? DecorationImage(
+                                image: NetworkImage(artist.avatarUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: artist.avatarUrl == null
+                          ? const Icon(
+                              Icons.person,
+                              size: 50,
+                              color: Colors.white24,
                             )
                           : null,
                     ),
-                    child: artist.avatarUrl == null
-                        ? const Icon(
-                            Icons.person,
-                            size: 50,
-                            color: Colors.white24,
-                          )
-                        : null,
                   ),
 
                   const SizedBox(height: 16),

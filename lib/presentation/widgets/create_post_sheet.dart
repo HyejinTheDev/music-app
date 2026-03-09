@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/song_model.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../logic/feed/feed_bloc.dart';
 import '../../logic/feed/feed_event.dart';
 import '../../data/repositories/post_repository.dart';
@@ -18,6 +18,7 @@ void showCreatePostSheet(
   Song? selectedSong;
   final feedBloc = context.read<FeedBloc>();
   final postRepository = context.read<PostRepository>();
+  final currentUid = context.read<AuthRepository>().currentUserId;
 
   final theme = Theme.of(context);
 
@@ -183,6 +184,7 @@ void showCreatePostSheet(
                       allSongs: allSongs,
                       postRepository: postRepository,
                       selectedSong: selectedSong,
+                      currentUid: currentUid,
                       onSelect: (song) =>
                           setSheetState(() => selectedSong = song),
                     ),
@@ -203,17 +205,17 @@ Widget _buildSongListForSharing({
   List<Song> allSongs = const [],
   required PostRepository postRepository,
   required Song? selectedSong,
+  required String? currentUid,
   required Function(Song) onSelect,
 }) {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
+  if (currentUid == null) {
     return const Center(
       child: Text("Vui lòng đăng nhập", style: TextStyle(color: Colors.grey)),
     );
   }
 
   return StreamBuilder<QuerySnapshot>(
-    stream: postRepository.getUserSongsStream(user.uid),
+    stream: postRepository.getUserSongsStream(currentUid),
     builder: (context, snapshot) {
       List<Song> songsToShow = [];
 

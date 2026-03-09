@@ -19,13 +19,16 @@ class SongItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          song.coverUrl,
-          width: 50,
-          height: 50,
-          fit: BoxFit.cover,
+      leading: Hero(
+        tag: 'song_cover_${song.id}',
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            song.coverUrl,
+            width: 50,
+            height: 50,
+            fit: BoxFit.cover,
+          ),
         ),
       ),
       title: Text(

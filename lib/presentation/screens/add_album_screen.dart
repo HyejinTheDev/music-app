@@ -25,6 +25,7 @@ class AddAlbumScreen extends StatefulWidget {
 }
 
 class _AddAlbumScreenState extends State<AddAlbumScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _coverUrlController = TextEditingController();
   final List<String> _selectedSongIds = [];
@@ -46,12 +47,7 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
   }
 
   void _saveAlbum() {
-    if (_titleController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Vui lòng nhập tên Album!")));
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
     if (_selectedSongIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Vui lòng chọn ít nhất 1 bài hát!")),
@@ -117,148 +113,170 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
           ),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Tên Album
-              TextFormField(
-                controller: _titleController,
-                style: const TextStyle(color: Colors.white, fontSize: 18),
-                decoration: const InputDecoration(
-                  labelText: "Tên Album (*)",
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white24),
+        body: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Tên Album
+                TextFormField(
+                  controller: _titleController,
+                  style: const TextStyle(color: Colors.white, fontSize: 18),
+                  decoration: const InputDecoration(
+                    labelText: "Tên Album (*)",
+                    labelStyle: TextStyle(color: Colors.grey),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.tealAccent),
+                    ),
+                    prefixIcon: Icon(Icons.album, color: Colors.tealAccent),
                   ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.tealAccent),
-                  ),
-                  prefixIcon: Icon(Icons.album, color: Colors.tealAccent),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "Vui lòng nhập tên Album";
+                    }
+                    return null;
+                  },
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // 2. Link Ảnh bìa
-              TextFormField(
-                controller: _coverUrlController,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: const InputDecoration(
-                  labelText: "Link ảnh bìa (Tùy chọn)",
-                  hintText: "Dán link ảnh (https://...) vào đây",
-                  hintStyle: TextStyle(color: Colors.white24),
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white24),
+                // 2. Link Ảnh bìa
+                TextFormField(
+                  controller: _coverUrlController,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: const InputDecoration(
+                    labelText: "Link ảnh bìa (Tùy chọn)",
+                    hintText: "Dán link ảnh (https://...) vào đây",
+                    hintStyle: TextStyle(color: Colors.white24),
+                    labelStyle: TextStyle(color: Colors.grey),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.tealAccent),
+                    ),
+                    prefixIcon: Icon(Icons.image, color: Colors.grey),
                   ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.tealAccent),
-                  ),
-                  prefixIcon: Icon(Icons.image, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                " * Bỏ trống nếu muốn dùng ảnh bìa mặc định",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-              const SizedBox(height: 30),
-
-              // 3. Danh sách nhạc
-              const Text(
-                "Chọn bài hát đưa vào Album:",
-                style: TextStyle(
-                  color: Colors.tealAccent,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: BlocBuilder<AlbumBloc, AlbumState>(
-                    buildWhen: (prev, curr) =>
-                        curr is AlbumLoading ||
-                        curr is AlbumUserSongsLoaded ||
-                        curr is AlbumError,
-                    builder: (context, state) {
-                      if (state is AlbumLoading) {
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.tealAccent,
-                          ),
-                        );
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      final uri = Uri.tryParse(value);
+                      if (uri == null ||
+                          !uri.hasScheme ||
+                          (!uri.isScheme('http') && !uri.isScheme('https'))) {
+                        return "Link ảnh không hợp lệ (phải bắt đầu bằng http:// hoặc https://)";
                       }
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  " * Bỏ trống nếu muốn dùng ảnh bìa mặc định",
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 30),
 
-                      if (state is AlbumUserSongsLoaded) {
-                        final localSongs = state.userSongs;
-                        if (localSongs.isEmpty) {
+                // 3. Danh sách nhạc
+                const Text(
+                  "Chọn bài hát đưa vào Album:",
+                  style: TextStyle(
+                    color: Colors.tealAccent,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: BlocBuilder<AlbumBloc, AlbumState>(
+                      buildWhen: (prev, curr) =>
+                          curr is AlbumLoading ||
+                          curr is AlbumUserSongsLoaded ||
+                          curr is AlbumError,
+                      builder: (context, state) {
+                        if (state is AlbumLoading) {
                           return const Center(
-                            child: Text(
-                              "Bạn chưa tải lên bài hát nào.\nHãy thêm bài hát trước khi tạo Album nhé!",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.white54),
+                            child: CircularProgressIndicator(
+                              color: Colors.tealAccent,
                             ),
                           );
                         }
 
-                        return _buildSongList(localSongs);
-                      }
+                        if (state is AlbumUserSongsLoaded) {
+                          final localSongs = state.userSongs;
+                          if (localSongs.isEmpty) {
+                            return const Center(
+                              child: Text(
+                                "Bạn chưa tải lên bài hát nào.\nHãy thêm bài hát trước khi tạo Album nhé!",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.white54),
+                              ),
+                            );
+                          }
 
-                      return const Center(
-                        child: Text(
-                          "Không tải được danh sách bài hát",
-                          style: TextStyle(color: Colors.white54),
-                        ),
-                      );
-                    },
+                          return _buildSongList(localSongs);
+                        }
+
+                        return const Center(
+                          child: Text(
+                            "Không tải được danh sách bài hát",
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // 4. Nút LƯU
-              BlocBuilder<AlbumBloc, AlbumState>(
-                builder: (context, state) {
-                  final isCreating = state is AlbumCreating;
-                  return SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.tealAccent,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                // 4. Nút LƯU
+                BlocBuilder<AlbumBloc, AlbumState>(
+                  builder: (context, state) {
+                    final isCreating = state is AlbumCreating;
+                    return SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.tealAccent,
+                          foregroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                      ),
-                      onPressed: isCreating ? null : _saveAlbum,
-                      child: isCreating
-                          ? const CircularProgressIndicator(color: Colors.black)
-                          : Text(
-                              _isEditing ? "CẬP NHẬT ALBUM" : "TẠO ALBUM",
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                        onPressed: isCreating ? null : _saveAlbum,
+                        child: isCreating
+                            ? const CircularProgressIndicator(
+                                color: Colors.black,
+                              )
+                            : Text(
+                                _isEditing ? "CẬP NHẬT ALBUM" : "TẠO ALBUM",
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-            ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../logic/feed/feed_bloc.dart';
 import '../../logic/feed/feed_event.dart';
 import 'edit_post_sheet.dart';
@@ -12,9 +12,11 @@ void showPostOptionsMenu(
   Map<String, dynamic> data,
   String docId,
 ) {
-  final user = FirebaseAuth.instance.currentUser;
+  final authRepo = context.read<AuthRepository>();
+  final currentUid = authRepo.currentUserId;
   final postUserId = data['userId'];
-  final isOwner = user != null && postUserId != null && user.uid == postUserId;
+  final isOwner =
+      currentUid != null && postUserId != null && currentUid == postUserId;
 
   showModalBottomSheet(
     context: context,

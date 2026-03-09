@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../data/models/song_model.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../logic/song_bloc/song_bloc.dart';
 import '../../logic/song_bloc/song_event.dart';
 import '../../logic/song_list/song_list_bloc.dart';
@@ -52,12 +52,12 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final coverUrl = _coverUrlController.text.trim();
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final authRepo = context.read<AuthRepository>();
 
     // Fallback: nếu displayName null → dùng phần trước @ của email
     final fallbackName =
-        currentUser?.displayName ??
-        currentUser?.email?.split('@').first ??
+        authRepo.currentUserDisplayName ??
+        authRepo.currentUserEmail?.split('@').first ??
         'Người dùng';
 
     final song = Song(
@@ -66,7 +66,7 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
       artist: _artistController.text,
       lyrics: _lyricsController.text,
       audioUrl: _audioUrlController.text,
-      userId: widget.song?.userId ?? currentUser?.uid,
+      userId: widget.song?.userId ?? authRepo.currentUserId,
       uploaderName: widget.song?.uploaderName ?? fallbackName,
       coverImageUrl: coverUrl.isNotEmpty ? coverUrl : null,
     );
@@ -112,6 +112,17 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
                   prefixIcon: Icon(Icons.image),
                   hintText: "Dán link ảnh vào đây",
                 ),
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    final uri = Uri.tryParse(value);
+                    if (uri == null ||
+                        !uri.hasScheme ||
+                        (!uri.isScheme('http') && !uri.isScheme('https'))) {
+                      return "Link ảnh không hợp lệ (phải bắt đầu bằng http:// hoặc https://)";
+                    }
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -161,6 +172,12 @@ class _AddEditSongScreenState extends State<AddEditSongScreen> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return "Vui lòng nhập link nhạc";
+                  }
+                  final uri = Uri.tryParse(value);
+                  if (uri == null ||
+                      !uri.hasScheme ||
+                      (!uri.isScheme('http') && !uri.isScheme('https'))) {
+                    return "Link nhạc không hợp lệ (phải bắt đầu bằng http:// hoặc https://)";
                   }
                   return null;
                 },

@@ -13,6 +13,7 @@ import 'favorites_detail_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/edit_name_dialog.dart';
 import '../widgets/profile_menu_tile.dart';
+import 'stats_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -247,6 +248,18 @@ class ProfileScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (_) => const FavoritesDetailScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    ProfileMenuTile(
+                      icon: Icons.bar_chart,
+                      title: 'Thống kê',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const StatsScreen(),
                           ),
                         );
                       },
