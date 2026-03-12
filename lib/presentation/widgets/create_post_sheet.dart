@@ -8,7 +8,6 @@ import '../../logic/feed/feed_event.dart';
 import '../../data/repositories/post_repository.dart';
 
 /// Bottom sheet tạo bài viết mới trên Feed
-/// Tách từ feed_screen._showCreatePostSheet
 void showCreatePostSheet(
   BuildContext context, {
   required List<Song> favoriteSongs,
@@ -20,12 +19,10 @@ void showCreatePostSheet(
   final postRepository = context.read<PostRepository>();
   final currentUid = context.read<AuthRepository>().currentUserId;
 
-  final theme = Theme.of(context);
-
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: theme.cardColor,
+    backgroundColor: const Color(0xFF1A1A1A),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -37,7 +34,7 @@ void showCreatePostSheet(
               bottom: MediaQuery.of(context).viewInsets.bottom,
               left: 16,
               right: 16,
-              top: 16,
+              top: 12,
             ),
             child: SizedBox(
               height: MediaQuery.of(context).size.height * 0.7,
@@ -47,30 +44,30 @@ void showCreatePostSheet(
                   // Thanh kéo
                   Center(
                     child: Container(
-                      width: 40,
+                      width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[600],
+                        color: Colors.grey[700],
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                  // Tiêu đề + nút Đăng bài
+                  // Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      const Text(
                         "Tạo bài viết mới",
                         style: TextStyle(
-                          color: theme.textTheme.titleLarge?.color,
-                          fontSize: 20,
+                          color: Colors.white,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      TextButton(
-                        onPressed: selectedSong == null
+                      GestureDetector(
+                        onTap: selectedSong == null
                             ? null
                             : () {
                                 feedBloc.add(
@@ -81,48 +78,69 @@ void showCreatePostSheet(
                                 );
                                 Navigator.pop(context);
                               },
-                        child: Text(
-                          "Đăng bài",
-                          style: TextStyle(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
                             color: selectedSong != null
                                 ? Colors.tealAccent
-                                : Colors.grey,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                                : Colors.grey[800],
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            "Đăng bài",
+                            style: TextStyle(
+                              color: selectedSong != null
+                                  ? Colors.black
+                                  : Colors.grey,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
                   // Ô nhập caption
                   TextField(
                     controller: captionController,
-                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: "Bạn đang nghĩ gì?...",
-                      hintStyle: TextStyle(color: Colors.grey[500]),
-                      filled: true,
-                      fillColor: Colors.black26,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                      hintStyle: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
                       ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.white12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.tealAccent),
+                      ),
+                      contentPadding: const EdgeInsets.all(14),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
                   // Bài hát đã chọn
                   if (selectedSong != null)
                     Container(
                       padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
-                        color: Colors.tealAccent.withValues(alpha: 0.1),
+                        color: Colors.tealAccent.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.tealAccent.withValues(alpha: 0.3),
+                          color: Colors.tealAccent.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Row(
@@ -131,9 +149,19 @@ void showCreatePostSheet(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
                               selectedSong!.coverUrl,
-                              width: 45,
-                              height: 45,
+                              width: 42,
+                              height: 42,
                               fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 42,
+                                height: 42,
+                                color: Colors.grey[800],
+                                child: const Icon(
+                                  Icons.music_note,
+                                  color: Colors.white38,
+                                  size: 20,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -145,7 +173,8 @@ void showCreatePostSheet(
                                   selectedSong!.title,
                                   style: const TextStyle(
                                     color: Colors.tealAccent,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -161,34 +190,55 @@ void showCreatePostSheet(
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, color: Colors.grey),
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.grey,
+                              size: 18,
+                            ),
                             onPressed: () =>
                                 setSheetState(() => selectedSong = null),
                           ),
                         ],
                       ),
                     ),
-                  const SizedBox(height: 12),
 
-                  // Tiêu đề danh sách chọn bài hát
-                  const Text(
-                    "Chọn bài hát để chia sẻ:",
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  // Label danh sách
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.library_music,
+                        color: Colors.grey,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Chọn bài hát để chia sẻ",
+                        style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
 
                   // Danh sách bài hát
                   Expanded(
-                    child: _buildSongListForSharing(
-                      favoriteSongs: favoriteSongs,
-                      allSongs: allSongs,
-                      postRepository: postRepository,
-                      selectedSong: selectedSong,
-                      currentUid: currentUid,
-                      onSelect: (song) =>
-                          setSheetState(() => selectedSong = song),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: _buildSongListForSharing(
+                        favoriteSongs: favoriteSongs,
+                        allSongs: allSongs,
+                        postRepository: postRepository,
+                        selectedSong: selectedSong,
+                        currentUid: currentUid,
+                        onSelect: (song) =>
+                            setSheetState(() => selectedSong = song),
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -232,14 +282,8 @@ Widget _buildSongListForSharing({
         }).toList();
       }
 
-      // Fallback 1: bài hát yêu thích
-      if (songsToShow.isEmpty) {
-        songsToShow = favoriteSongs;
-      }
-      // Fallback 2: tất cả bài hát từ SQLite local
-      if (songsToShow.isEmpty) {
-        songsToShow = allSongs;
-      }
+      if (songsToShow.isEmpty) songsToShow = favoriteSongs;
+      if (songsToShow.isEmpty) songsToShow = allSongs;
 
       if (songsToShow.isEmpty) {
         return const Center(
@@ -251,42 +295,69 @@ Widget _buildSongListForSharing({
         );
       }
 
-      return ListView.builder(
-        itemCount: songsToShow.length,
-        itemBuilder: (context, index) {
-          final song = songsToShow[index];
-          final isSelected = selectedSong?.id == song.id;
-          return ListTile(
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.network(
-                song.coverUrl,
-                width: 45,
-                height: 45,
-                fit: BoxFit.cover,
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ListView.builder(
+          itemCount: songsToShow.length,
+          padding: EdgeInsets.zero,
+          itemBuilder: (context, index) {
+            final song = songsToShow[index];
+            final isSelected = selectedSong?.id == song.id;
+            return Container(
+              color: isSelected
+                  ? Colors.tealAccent.withValues(alpha: 0.06)
+                  : Colors.transparent,
+              child: ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 2,
+                ),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    song.coverUrl,
+                    width: 42,
+                    height: 42,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 42,
+                      height: 42,
+                      color: Colors.grey[800],
+                      child: const Icon(
+                        Icons.music_note,
+                        color: Colors.white38,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+                title: Text(
+                  song.title,
+                  style: TextStyle(
+                    color: isSelected ? Colors.tealAccent : Colors.white,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  song.artist,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                trailing: Icon(
+                  isSelected
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  color: isSelected ? Colors.tealAccent : Colors.grey[700],
+                  size: 20,
+                ),
+                onTap: () => onSelect(song),
               ),
-            ),
-            title: Text(
-              song.title,
-              style: TextStyle(
-                color: isSelected
-                    ? Colors.tealAccent
-                    : Theme.of(context).textTheme.bodyLarge?.color,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              song.artist,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-            trailing: isSelected
-                ? const Icon(Icons.check_circle, color: Colors.tealAccent)
-                : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
-            onTap: () => onSelect(song),
-          );
-        },
+            );
+          },
+        ),
       );
     },
   );

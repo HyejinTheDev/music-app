@@ -4,7 +4,6 @@ import '../../logic/feed/feed_bloc.dart';
 import '../../logic/feed/feed_event.dart';
 
 /// Bottom sheet chỉnh sửa bài viết
-/// Tách từ post_card.dart
 void showEditPostSheet(
   BuildContext context,
   Map<String, dynamic> data,
@@ -15,7 +14,7 @@ void showEditPostSheet(
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1E1E1E),
+    backgroundColor: const Color(0xFF1A1A1A),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -25,23 +24,26 @@ void showEditPostSheet(
           bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
           left: 16,
           right: 16,
-          top: 16,
+          top: 12,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Thanh kéo
             Center(
               child: Container(
-                width: 40,
+                width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[600],
+                  color: Colors.grey[700],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -49,12 +51,12 @@ void showEditPostSheet(
                   "Chỉnh sửa bài viết",
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
+                GestureDetector(
+                  onTap: () {
                     context.read<FeedBloc>().add(
                       EditPost(
                         docId: docId,
@@ -63,22 +65,34 @@ void showEditPostSheet(
                     );
                     Navigator.pop(sheetContext);
                   },
-                  child: const Text(
-                    "Lưu",
-                    style: TextStyle(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
                       color: Colors.tealAccent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      "Lưu",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+
+            // Bài hát đính kèm
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.black26,
+                color: Colors.white.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white10),
               ),
@@ -88,16 +102,20 @@ void showEditPostSheet(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
                       data['songCoverUrl'] ?? '',
-                      width: 45,
-                      height: 45,
+                      width: 42,
+                      height: 42,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        width: 45,
-                        height: 45,
-                        color: Colors.grey[800],
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[800],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         child: const Icon(
                           Icons.music_note,
-                          color: Colors.white54,
+                          color: Colors.white38,
+                          size: 20,
                         ),
                       ),
                     ),
@@ -111,7 +129,8 @@ void showEditPostSheet(
                           data['songTitle'] ?? '',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -129,20 +148,27 @@ void showEditPostSheet(
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+
+            // Ô nhập caption
             TextField(
               controller: captionController,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white, fontSize: 15),
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: "Nội dung bài viết...",
-                hintStyle: TextStyle(color: Colors.grey[500]),
+                hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
                 filled: true,
-                fillColor: Colors.black26,
-                border: OutlineInputBorder(
+                fillColor: Colors.white.withValues(alpha: 0.05),
+                enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                  borderSide: const BorderSide(color: Colors.white12),
                 ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.tealAccent),
+                ),
+                contentPadding: const EdgeInsets.all(14),
               ),
             ),
             const SizedBox(height: 20),

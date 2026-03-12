@@ -103,6 +103,7 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
         }
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: const Color(0xFF121212),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
@@ -123,17 +124,40 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
                 // 1. Tên Album
                 TextFormField(
                   controller: _titleController,
-                  style: const TextStyle(color: Colors.white, fontSize: 18),
-                  decoration: const InputDecoration(
-                    labelText: "Tên Album (*)",
-                    labelStyle: TextStyle(color: Colors.grey),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white24),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  decoration: InputDecoration(
+                    labelText: "Tên Album *",
+                    labelStyle: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
                     ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.tealAccent),
+                    prefixIcon: const Icon(
+                      Icons.album,
+                      color: Colors.grey,
+                      size: 20,
                     ),
-                    prefixIcon: Icon(Icons.album, color: Colors.tealAccent),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.tealAccent),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.redAccent),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.redAccent),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -142,24 +166,50 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
 
                 // 2. Link Ảnh bìa
                 TextFormField(
                   controller: _coverUrlController,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "Link ảnh bìa (Tùy chọn)",
                     hintText: "Dán link ảnh (https://...) vào đây",
-                    hintStyle: TextStyle(color: Colors.white24),
-                    labelStyle: TextStyle(color: Colors.grey),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white24),
+                    hintStyle: const TextStyle(
+                      color: Colors.white24,
+                      fontSize: 13,
                     ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.tealAccent),
+                    labelStyle: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
                     ),
-                    prefixIcon: Icon(Icons.image, color: Colors.grey),
+                    prefixIcon: const Icon(
+                      Icons.image_outlined,
+                      color: Colors.grey,
+                      size: 20,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.tealAccent),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.redAccent),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.redAccent),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                   ),
                   validator: (value) {
                     if (value != null && value.isNotEmpty) {
@@ -167,18 +217,18 @@ class _AddAlbumScreenState extends State<AddAlbumScreen> {
                       if (uri == null ||
                           !uri.hasScheme ||
                           (!uri.isScheme('http') && !uri.isScheme('https'))) {
-                        return "Link ảnh không hợp lệ (phải bắt đầu bằng http:// hoặc https://)";
+                        return "Link ảnh không hợp lệ";
                       }
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 const Text(
-                  " * Bỏ trống nếu muốn dùng ảnh bìa mặc định",
+                  "  Bỏ trống nếu muốn dùng ảnh mặc định",
                   style: TextStyle(
                     color: Colors.grey,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontStyle: FontStyle.italic,
                   ),
                 ),

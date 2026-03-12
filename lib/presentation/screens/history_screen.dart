@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:music_app/logic/history/history_event.dart';
+import '../../logic/history/history_event.dart';
 import '../../data/models/song_model.dart';
 import '../../logic/history/history_bloc.dart';
 import '../../logic/history/history_state.dart';

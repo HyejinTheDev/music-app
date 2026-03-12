@@ -17,45 +17,86 @@ class SongItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Hero(
-        tag: 'song_cover_${song.id}',
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            song.coverUrl,
-            width: 50,
-            height: 50,
-            fit: BoxFit.cover,
+    final theme = Theme.of(context);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? Colors.tealAccent.withValues(alpha: 0.08)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Hero(
+          tag: 'song_cover_${song.id}',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              song.coverUrl,
+              width: 52,
+              height: 52,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.grey[800],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.music_note,
+                  color: Colors.white38,
+                  size: 24,
+                ),
+              ),
+            ),
           ),
         ),
-      ),
-      title: Text(
-        song.title,
-        style: TextStyle(
-          color: isSelected
-              ? Colors.tealAccent
-              : Theme.of(context).textTheme.bodyLarge?.color,
-          fontWeight: FontWeight.w600,
+        title: Text(
+          song.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: isSelected
+                ? Colors.tealAccent
+                : theme.textTheme.bodyLarge?.color,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
         ),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(song.artist, style: const TextStyle(color: Colors.grey)),
-          if (song.uploaderName != null && song.uploaderName!.isNotEmpty)
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              "Đăng bởi: ${song.uploaderName}",
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
+              song.artist,
+              style: TextStyle(
+                color: isSelected
+                    ? Colors.tealAccent.withValues(alpha: 0.6)
+                    : Colors.grey,
+                fontSize: 13,
+              ),
             ),
-        ],
+            if (song.uploaderName != null && song.uploaderName!.isNotEmpty)
+              Text(
+                "Đăng bởi: ${song.uploaderName}",
+                style: TextStyle(
+                  color: theme.brightness == Brightness.dark
+                      ? Colors.white30
+                      : Colors.grey.shade400,
+                  fontSize: 11,
+                ),
+              ),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.more_vert, color: Colors.grey, size: 20),
+          onPressed: onOptionsTap,
+        ),
+        onTap: onTap,
       ),
-      trailing: IconButton(
-        icon: const Icon(Icons.more_vert, color: Colors.grey),
-        onPressed: onOptionsTap,
-      ),
-      onTap: onTap,
     );
   }
 }

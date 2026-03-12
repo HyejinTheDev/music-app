@@ -15,7 +15,9 @@ import 'promo_banner.dart';
 import 'artist_banner.dart';
 import 'album_banner.dart';
 import '../screens/artist_profile_screen.dart';
+import '../screens/all_songs_screen.dart';
 import '../screens/notification_screen.dart';
+import '../screens/ai_chat_screen.dart';
 import '../../logic/notification/notification_bloc.dart';
 import '../../logic/notification/notification_state.dart';
 
@@ -108,6 +110,45 @@ class HomeContent extends StatelessWidget {
                   );
                 },
               ),
+              // Nút "Xem tất cả"
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16, top: 4, bottom: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AllSongsScreen(
+                            songs: songs,
+                            currentSong: currentSong,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Xem tất cả',
+                          style: TextStyle(
+                            color: Colors.tealAccent,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          color: Colors.tealAccent,
+                          size: 12,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               _buildSectionTitle(context, loc.translate('latest_albums')),
               const AlbumBanner(),
               const SizedBox(height: 20),
@@ -135,6 +176,19 @@ class HomeContent extends StatelessWidget {
           ),
           Row(
             children: [
+              // --- NÚT AI CHAT ---
+              IconButton(
+                icon: Icon(Icons.auto_awesome, color: theme.iconTheme.color),
+                tooltip: 'Music AI',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AiChatScreen(),
+                    ),
+                  );
+                },
+              ),
               // --- NÚT CHUÔNG THÔNG BÁO ---
               BlocBuilder<NotificationBloc, NotificationState>(
                 builder: (context, notifState) {

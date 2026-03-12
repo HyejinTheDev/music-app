@@ -104,6 +104,9 @@ class SongRepository {
         await _dbHelper.deleteAll();
         int count = 0;
 
+        // Dùng Set để track bài hát đã import (tránh duplicate)
+        final importedKeys = <String>{};
+
         final allData = Map<String, dynamic>.from(snapshot.value as Map);
 
         for (final userId in allData.keys) {
@@ -123,13 +126,23 @@ class SongRepository {
                 songData['user_id'] ??= userId;
 
                 // ★ Bỏ qua bài hát bị nhân bản (user_id trong data ≠ userId trên path)
-                // Đây là rác từ bug syncToCloud cũ đã push tất cả bài dưới mọi user
                 if (songData['user_id'] != userId) {
                   debugPrint(
                     '[SyncFromCloud] 🗑️ Bỏ qua bản sao rác: $songId (user_id=${songData['user_id']} ≠ path=$userId)',
                   );
                   continue;
                 }
+
+                // ★ Dedup: tạo key duy nhất từ title+artist+userId
+                final dedupeKey =
+                    '${songData['title']}_${songData['artist']}_${songData['user_id']}';
+                if (importedKeys.contains(dedupeKey)) {
+                  debugPrint(
+                    '[SyncFromCloud] 🗑️ Bỏ qua duplicate: $songId ($dedupeKey)',
+                  );
+                  continue;
+                }
+                importedKeys.add(dedupeKey);
 
                 final song = Song.fromMap(songData);
                 await _dbHelper.insertSong(song);

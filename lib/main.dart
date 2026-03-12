@@ -48,6 +48,8 @@ import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/home_screen.dart';
 import 'data/services/local_notification_service.dart';
 import 'data/services/fcm_service.dart';
+import 'data/services/gemini_service.dart';
+import 'logic/ai_chat/ai_chat_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,6 +87,7 @@ class MyApp extends StatelessWidget {
         RepositoryProvider(create: (_) => AlbumRepository()),
         RepositoryProvider(create: (_) => NotificationRepository()),
         RepositoryProvider(create: (_) => followRepository),
+        RepositoryProvider(create: (_) => GeminiService()),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -174,6 +177,13 @@ class MyApp extends StatelessWidget {
               followRepository: context.read<FollowRepository>(),
               authRepository: context.read<AuthRepository>(),
             )..add(LoadFollowing()),
+          ),
+
+          // AI Chat — dùng GeminiService
+          BlocProvider<AiChatBloc>(
+            create: (context) => AiChatBloc(
+              geminiService: context.read<GeminiService>(),
+            ),
           ),
         ],
 

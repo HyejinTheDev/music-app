@@ -30,6 +30,7 @@ class MiniPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playerBloc = context.read<PlayerBloc>();
+    final theme = Theme.of(context);
 
     return Dismissible(
       key: const Key('mini_player'),
@@ -52,117 +53,180 @@ class MiniPlayer extends StatelessWidget {
           );
         },
         child: Container(
-          height: 70,
           margin: const EdgeInsets.only(bottom: 10, left: 10, right: 10),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor.withValues(alpha: 0.98),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).dividerColor),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Hero(
-                tag: 'current_artwork',
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(35),
-                  child: Image.network(
-                    song.coverUrl,
-                    width: 45,
-                    height: 45,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 45,
-                      height: 45,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[800],
-                        borderRadius: BorderRadius.circular(35),
-                      ),
-                      child: const Icon(
-                        Icons.music_note,
-                        color: Colors.white54,
-                        size: 24,
-                      ),
-                    ),
-                  ),
+              // Nội dung chính
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      song.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    // Ảnh bìa
+                    Hero(
+                      tag: 'current_artwork',
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          song.coverUrl,
+                          width: 46,
+                          height: 46,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[800],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.music_note,
+                              color: Colors.white54,
+                              size: 22,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    Text(
-                      song.artist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    const SizedBox(width: 12),
+                    // Thông tin bài hát
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            song.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: theme.textTheme.bodyLarge?.color,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            song.artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Nút previous
+                    IconButton(
+                      icon: Icon(
+                        Icons.skip_previous,
+                        color: theme.iconTheme.color,
+                        size: 22,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      padding: EdgeInsets.zero,
+                      onPressed: songs.isNotEmpty
+                          ? () => playerBloc.add(PreviousSongRequested())
+                          : null,
+                    ),
+                    // Nút Play/Pause
+                    StreamBuilder<PlayerState>(
+                      stream: player.playerStateStream,
+                      builder: (context, snapshot) {
+                        final playing = snapshot.data?.playing ?? false;
+                        return Container(
+                          width: 38,
+                          height: 38,
+                          decoration: const BoxDecoration(
+                            color: Colors.tealAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              playing ? Icons.pause : Icons.play_arrow,
+                              color: Colors.black,
+                              size: 22,
+                            ),
+                            onPressed: () {
+                              if (playing) {
+                                playerBloc.add(PauseRequested());
+                              } else {
+                                playerBloc.add(ResumeRequested());
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                    // Nút next
+                    IconButton(
+                      icon: Icon(
+                        Icons.skip_next,
+                        color: theme.iconTheme.color,
+                        size: 22,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      padding: EdgeInsets.zero,
+                      onPressed: songs.isNotEmpty
+                          ? () => playerBloc.add(NextSongRequested())
+                          : null,
                     ),
                   ],
                 ),
               ),
-              // Nút previous — dùng PlayerBloc
-              IconButton(
-                icon: Icon(
-                  Icons.skip_previous,
-                  color: Theme.of(context).iconTheme.color,
-                ),
-                onPressed: songs.isNotEmpty
-                    ? () => playerBloc.add(PreviousSongRequested())
-                    : null,
-              ),
-              // Nút Play/Pause — stream trạng thái
-              StreamBuilder<PlayerState>(
-                stream: player.playerStateStream,
-                builder: (context, snapshot) {
-                  final playing = snapshot.data?.playing ?? false;
-                  return CircleAvatar(
-                    backgroundColor: Colors.white,
-                    radius: 18,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      icon: Icon(
-                        playing ? Icons.pause : Icons.play_arrow,
-                        color: Colors.black,
-                      ),
-                      onPressed: () {
-                        if (playing) {
-                          playerBloc.add(PauseRequested());
-                        } else {
-                          playerBloc.add(ResumeRequested());
-                        }
-                      },
-                    ),
+              // Thanh progress nhỏ
+              StreamBuilder<Duration?>(
+                stream: player.durationStream,
+                builder: (context, durationSnap) {
+                  final total = durationSnap.data ?? Duration.zero;
+                  return StreamBuilder<Duration>(
+                    stream: player.positionStream,
+                    builder: (context, posSnap) {
+                      final pos = posSnap.data ?? Duration.zero;
+                      final progress = total.inMilliseconds > 0
+                          ? pos.inMilliseconds / total.inMilliseconds
+                          : 0.0;
+                      return ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(14),
+                          bottomRight: Radius.circular(14),
+                        ),
+                        child: LinearProgressIndicator(
+                          value: progress.clamp(0.0, 1.0),
+                          minHeight: 2.5,
+                          backgroundColor: Colors.transparent,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.tealAccent,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
-              ),
-              // Nút next — dùng PlayerBloc
-              IconButton(
-                icon: Icon(
-                  Icons.skip_next,
-                  color: Theme.of(context).iconTheme.color,
-                ),
-                onPressed: songs.isNotEmpty
-                    ? () => playerBloc.add(NextSongRequested())
-                    : null,
               ),
             ],
           ),
